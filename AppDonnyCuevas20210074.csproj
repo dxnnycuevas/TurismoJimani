@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- El servicio BERT (Python) no forma parte de la compilación de ASP.NET -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);ServicioBert\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -17,6 +17,10 @@
             <option value="">-- Seleccione --</option>
             <option value="es">Español</option>
             <option value="en">Inglés</option>
+            @if (!string.IsNullOrEmpty(Model.Idioma) && !new[] { "es", "en" }.Contains(Model.Idioma))
+            {
+                <option value="@Model.Idioma">@Model.Idioma</option>
+            }
         </select>
         <span asp-validation-for="Idioma" class="text-danger small"></span>
     </div>

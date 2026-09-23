@@ -1,0 +1,244 @@
+{
+  "descripcion": "Ejemplos base para entrenar el clasificador de intenciones. Se copian a las tablas Intenciones y EjemplosIntencion la primera vez. Las plantillas usan nombres de relleno solo para que BERT aprenda la estructura de la frase; los datos reales se consultan siempre en SQL Server.",
+  "ejemplosPorPlantilla": 3,
+  "rellenos": {
+    "atractivo": [
+      "Lago Enriquillo", "Las Caritas", "Balneario Las Barías", "Sierra de Bahoruco", "Boca de Cachón",
+      "Laguna de Cabral", "Isla Cabritos", "Hoyo de Pelempito", "el mirador", "Charco Azul",
+      "Bahía de las Águilas", "Pico Duarte", "Salto El Limón", "Los Tres Ojos", "la Cueva de las Maravillas",
+      "Parque Nacional Jaragua", "la Laguna de Oviedo", "el sendero del río"
+    ],
+    "alojamiento": [
+      "Hotel Brisas del Lago", "Hostal El Mirador", "Hotel Jimaní", "Cabañas La Montaña", "Villa Serena",
+      "Hotel Central", "Aparta Hotel Los Pinos", "Hotel La Frontera", "Hostal Doña María", "Hotel El Paraíso",
+      "Cabañas del Sur", "Hotel Las Palmas"
+    ],
+    "restaurante": [
+      "Comedor Doña Rosa", "El Fogón Criollo", "Pizzería La Esquina", "Restaurante El Lago", "Cafetería Central",
+      "Parrillada Don Pedro", "Pica Pollo El Buen Sabor", "Restaurante La Frontera", "Rancho Típico",
+      "Marisquería El Pescador"
+    ],
+    "ruta": [
+      "Jimaní - Lago Enriquillo", "del Lago", "de la Sierra", "Ecoturística del Sur", "de los Miradores",
+      "Boca de Cachón", "de senderismo", "Frontera - Mercado", "Santo Domingo - Jimaní", "de Las Caritas"
+    ],
+    "destino": [
+      "Jimaní", "el Lago Enriquillo", "Las Caritas", "Boca de Cachón", "la Sierra de Bahoruco",
+      "el balneario Las Barías", "la frontera", "el mercado binacional", "la Laguna de Cabral", "el mirador",
+      "el hotel", "el centro del pueblo", "Barahona", "el parque nacional"
+    ]
+  },
+  "intenciones": [
+    {
+      "nombre": "BuscarAlojamiento",
+      "descripcion": "El usuario busca opciones de hospedaje (hoteles, hostales, cabañas).",
+      "ejemplos": [
+        "Quiero un hotel", "Quiero buscar un hotel", "¿Dónde me puedo hospedar?", "Necesito alojamiento",
+        "¿Qué hoteles hay en Jimaní?", "busco hotel", "¿hay hoteles por aquí?", "¿dónde puedo dormir esta noche?",
+        "necesito un lugar para quedarme", "¿dónde me puedo quedar a dormir?", "recomiéndame un hotel",
+        "quiero reservar una habitación", "¿tienen hostales?", "busco un hostal barato", "¿hay cabañas para alquilar?",
+        "¿dónde puedo pasar la noche?", "necesito una habitación para dos personas", "¿qué opciones de hospedaje hay?",
+        "muéstrame los alojamientos", "lista de hoteles", "hoteles en Jimaní", "¿algún hotel cerca del lago?",
+        "quiero un hotel económico", "¿cuáles son los hoteles más baratos?", "busco dónde quedarme el fin de semana",
+        "¿hay alojamiento disponible?", "necesito hospedaje para mi familia", "¿dónde se quedan los turistas?",
+        "quiero alquilar una casa para vacaciones", "¿hay villas o apartamentos?", "¿dónde puedo dormir en Independencia?",
+        "vamos a pasar dos noches, ¿dónde nos quedamos?", "un sitio para dormir", "hotel", "hoteles", "hospedaje",
+        "¿me recomiendas dónde hospedarme?", "¿qué alojamientos tienen registrados?", "estoy buscando un motel",
+        "¿hay algún aparta hotel?", "quiero ver opciones de hotel con piscina", "necesito un cuarto para esta noche",
+        "¿dónde hay habitaciones disponibles?", "busco alojamiento cerca de la frontera"
+      ]
+    },
+    {
+      "nombre": "BuscarRestaurante",
+      "descripcion": "El usuario busca lugares para comer o beber.",
+      "ejemplos": [
+        "¿Dónde puedo comer?", "¿Qué restaurantes hay?", "tengo hambre", "busco un restaurante", "¿dónde puedo almorzar?",
+        "¿dónde cenar en Jimaní?", "recomiéndame un lugar para comer", "¿hay comida típica por aquí?",
+        "quiero comer comida criolla", "¿dónde venden comida?", "restaurantes en Jimaní", "¿hay cafeterías?",
+        "¿dónde puedo desayunar?", "quiero probar la comida local", "¿algún restaurante barato?",
+        "¿dónde comer pescado del lago?", "lista de restaurantes", "muéstrame los restaurantes",
+        "¿qué lugares de comida tienen?", "¿hay comedores cerca?", "¿dónde puedo pedir comida a domicilio?",
+        "¿hay pizzerías?", "busco un sitio para comer con mi familia", "¿dónde se come bien?",
+        "¿dónde puedo comer un sancocho?", "quiero un plato del día", "¿dónde almuerzan los turistas?",
+        "¿hay algún restaurante abierto de noche?", "comida", "restaurante", "restaurantes",
+        "¿dónde consigo algo de comer?", "nos dio hambre, ¿qué nos recomiendas?", "¿hay comida rápida?",
+        "¿dónde puedo tomarme un café?", "quiero ir a cenar", "¿qué opciones hay para comer?",
+        "¿hay un buen restaurante en el pueblo?", "¿dónde venden pica pollo?", "busco un comedor económico",
+        "¿dónde hay un restaurante cerca del lago?", "quiero comer mariscos"
+      ]
+    },
+    {
+      "nombre": "BuscarAtractivo",
+      "descripcion": "El usuario busca atractivos o lugares turísticos para visitar.",
+      "ejemplos": [
+        "Quiero conocer lugares naturales", "¿Qué puedo visitar?", "¿Qué lugares naturales puedo visitar en Jimaní?",
+        "¿Qué atractivos naturales puedo visitar?", "¿qué lugares turísticos hay?", "¿qué hay para ver en Jimaní?",
+        "recomiéndame lugares para visitar", "¿qué atractivos tiene Jimaní?", "quiero hacer turismo",
+        "¿qué sitios de interés hay?", "lugares para conocer", "¿dónde puedo ir de paseo?", "quiero hacer ecoturismo",
+        "¿hay lugares para hacer senderismo?", "¿qué lugares históricos hay?", "¿hay sitios arqueológicos?",
+        "¿dónde puedo bañarme en un balneario?", "¿hay ríos o balnearios?", "quiero ver paisajes", "¿qué hago en Jimaní?",
+        "¿qué actividades puedo hacer?", "¿hay miradores?", "¿qué lugares recomiendas?", "atractivos turísticos",
+        "lugares turísticos", "¿cuáles son los atractivos destacados?", "¿qué es lo más bonito para visitar?",
+        "¿qué lugares hay cerca?", "¿y qué lugares turísticos hay cerca?", "¿hay parques nacionales?",
+        "quiero ir a la montaña", "¿dónde puedo ver flamencos o cocodrilos?", "busco lugares culturales",
+        "¿hay áreas protegidas?", "quiero caminar en la naturaleza", "¿qué visitar este fin de semana?",
+        "¿qué lugares puedo visitar con niños?", "¿hay lagos o lagunas para visitar?", "dame una lista de lugares para visitar",
+        "¿qué puedo conocer en la provincia Independencia?", "¿dónde puedo tomar fotos bonitas?", "quiero aventura",
+        "¿qué excursiones hay?", "¿hay algo interesante que ver?", "muéstrame los atractivos", "¿qué lugares ecoturísticos hay?",
+        "¿qué atractivos hay cerca de aquí?", "¿qué más puedo visitar por la zona?"
+      ]
+    },
+    {
+      "nombre": "BuscarTransporte",
+      "descripcion": "El usuario busca medios de transporte (guaguas, taxis, alquiler).",
+      "ejemplos": [
+        "¿Hay transporte?", "¿cómo me muevo por Jimaní?", "¿hay guaguas?", "¿dónde tomo una guagua para Santo Domingo?",
+        "necesito un taxi", "¿hay motoconchos?", "¿qué transporte hay disponible?", "busco transporte",
+        "¿hay servicio de taxi?", "¿dónde alquilo un carro?", "¿hay autobuses hacia Barahona?",
+        "quiero contratar un transporte turístico", "¿cómo puedo moverme entre los atractivos?", "¿hay rent car?",
+        "¿dónde está la parada de guaguas?", "¿hay transporte público?", "¿cuánto cuesta el transporte?",
+        "necesito que me lleven al lago", "¿hay excursiones con transporte incluido?", "transporte", "taxis",
+        "¿hay alguna compañía de transporte?", "¿a qué hora salen las guaguas?", "¿qué autobús tomo desde la capital?",
+        "¿dónde consigo un chofer?", "¿hay transporte para grupos?", "¿hay servicio de traslado?",
+        "¿qué medios de transporte hay?", "¿hay moto taxis?", "quiero alquilar una moto",
+        "¿alguien me puede llevar a la frontera?", "¿hay transporte al aeropuerto?", "¿dónde tomo un carro público?",
+        "¿hay transporte que requiera reserva?", "muéstrame las opciones de transporte", "necesito movilidad"
+      ]
+    },
+    {
+      "nombre": "BuscarRuta",
+      "descripcion": "El usuario quiere saber cómo llegar a un lugar o qué rutas y recorridos existen.",
+      "ejemplos": [
+        "¿qué rutas hay?", "muéstrame las rutas turísticas", "¿hay rutas de senderismo?", "¿qué recorridos puedo hacer?",
+        "quiero hacer una ruta", "¿hay rutas en bicicleta?", "rutas", "¿qué itinerarios recomiendan?",
+        "¿cuáles rutas hay disponibles?", "¿hay algún recorrido guiado?", "¿cómo llego?", "¿por dónde se llega?",
+        "dame direcciones", "¿cuánto tiempo se tarda en llegar?", "¿a cuántos kilómetros queda?",
+        "¿Cómo llego al Lago Enriquillo?", "¿cómo llego a Jimaní desde Santo Domingo?", "quiero saber el camino",
+        "¿cómo llego a ese lugar?", "¿cómo llego ahí?"
+      ],
+      "plantillas": [
+        "¿Cómo llego a {destino}?", "¿cómo puedo llegar a {destino}?", "¿qué camino tomo para ir a {destino}?",
+        "ruta hacia {destino}", "¿dónde queda {destino}?", "¿cómo se va a {destino}?", "¿qué tan lejos está {destino}?",
+        "indicaciones para llegar a {destino}", "¿cuál es la ruta para ir a {destino}?", "quiero ir a {destino}, ¿cómo llego?"
+      ],
+      "relleno": "destino"
+    },
+    {
+      "nombre": "ConsultarAtractivo",
+      "descripcion": "El usuario pide información detallada sobre un atractivo o lugar concreto.",
+      "ejemplos": [
+        "Háblame del Lago Enriquillo", "háblame de ese lugar", "cuéntame más del primero", "¿qué me puedes decir del segundo?",
+        "más información de ese atractivo", "háblame del tercero", "información del último", "¿y ese lugar qué tiene?",
+        "quiero saber más de ese sitio", "cuéntame más sobre ese", "¿qué se puede hacer ahí?", "¿ese lugar es difícil de visitar?",
+        "¿cuánto dura la visita?", "¿a qué hora abre ese lugar?", "detalles del primer atractivo"
+      ],
+      "plantillas": [
+        "Háblame de {atractivo}", "información sobre {atractivo}", "¿qué es {atractivo}?", "cuéntame sobre {atractivo}",
+        "¿qué hay en {atractivo}?", "quiero saber más de {atractivo}", "¿qué se puede hacer en {atractivo}?",
+        "detalles de {atractivo}", "¿cómo es {atractivo}?", "¿vale la pena visitar {atractivo}?",
+        "¿cuál es el horario de {atractivo}?", "¿es difícil visitar {atractivo}?", "¿cuánto dura la visita a {atractivo}?",
+        "dame información de {atractivo}", "¿cuesta la entrada a {atractivo}?"
+      ],
+      "relleno": "atractivo"
+    },
+    {
+      "nombre": "ConsultarAlojamiento",
+      "descripcion": "El usuario pide detalles de un alojamiento concreto o compara alojamientos (precio, horario, reservas).",
+      "ejemplos": [
+        "¿Cuál tiene menor precio?", "¿cuál es el más barato?", "¿cuál hotel es el más económico?", "¿cuál es el más caro?",
+        "¿cuánto cuesta la noche?", "háblame de ese hotel", "más información del primer hotel", "¿el segundo hotel tiene piscina?",
+        "¿cuántas habitaciones tiene ese hotel?", "¿cómo reservo ese hotel?", "¿a qué hora es la entrada al hotel?",
+        "precio del hotel", "¿cuál hotel tiene el precio más bajo?", "¿cuánto cuesta hospedarse ahí?",
+        "¿a qué hora es el check out?"
+      ],
+      "plantillas": [
+        "Háblame del {alojamiento}", "información del {alojamiento}", "¿cuánto cuesta el {alojamiento}?",
+        "¿qué precio tiene {alojamiento}?", "¿el {alojamiento} tiene habitaciones disponibles?",
+        "¿a qué hora es el check-in en {alojamiento}?", "detalles del {alojamiento}", "¿cómo reservo en {alojamiento}?",
+        "¿qué servicios tiene el {alojamiento}?", "¿el {alojamiento} tiene wifi?", "contacto del {alojamiento}"
+      ],
+      "relleno": "alojamiento"
+    },
+    {
+      "nombre": "ConsultarRestaurante",
+      "descripcion": "El usuario pide detalles de un restaurante concreto (menú, horario, precio, domicilio).",
+      "ejemplos": [
+        "¿cuál restaurante es más barato?", "háblame de ese restaurante", "¿el primero hace delivery?",
+        "¿a qué hora cierra ese restaurante?", "¿cuál restaurante es más económico?", "¿ese restaurante tiene menú?",
+        "¿qué venden en el segundo restaurante?", "¿dónde se come más barato?", "¿a qué hora abren?",
+        "¿tienen servicio a domicilio?"
+      ],
+      "plantillas": [
+        "Háblame del restaurante {restaurante}", "¿qué venden en {restaurante}?", "¿a qué hora abre {restaurante}?",
+        "¿{restaurante} tiene servicio a domicilio?", "menú de {restaurante}", "¿es caro {restaurante}?",
+        "información de {restaurante}", "horario de {restaurante}", "¿qué tipo de comida tiene {restaurante}?",
+        "teléfono de {restaurante}"
+      ],
+      "relleno": "restaurante"
+    },
+    {
+      "nombre": "ConsultarRuta",
+      "descripcion": "El usuario pide detalles de una ruta concreta (distancia, duración, dificultad, instrucciones).",
+      "ejemplos": [
+        "¿cuánto dura esa ruta?", "¿qué tan difícil es esa ruta?", "¿cuántos kilómetros tiene esa ruta?",
+        "detalles de la primera ruta", "háblame de esa ruta", "¿cuál ruta es la más corta?", "¿qué ruta es más fácil?",
+        "¿cuál es la ruta más rápida?", "instrucciones de esa ruta", "¿qué transporte se usa en esa ruta?"
+      ],
+      "plantillas": [
+        "detalles de la ruta {ruta}", "¿cuánto dura la ruta {ruta}?", "¿qué distancia tiene la ruta {ruta}?",
+        "háblame de la ruta {ruta}", "¿es difícil la ruta {ruta}?", "instrucciones de la ruta {ruta}",
+        "¿qué transporte se usa en la ruta {ruta}?"
+      ],
+      "relleno": "ruta"
+    },
+    {
+      "nombre": "Saludo",
+      "descripcion": "El usuario saluda.",
+      "ejemplos": [
+        "hola", "Hola", "buenas", "buenos días", "buenas tardes", "buenas noches", "hey", "saludos", "¿qué tal?",
+        "hola asistente", "klk", "hola, ¿cómo estás?", "buen día", "holaa", "hola, buenas tardes", "saludos cordiales",
+        "¿hay alguien ahí?", "hola, ¿qué tal todo?", "epa", "wepa"
+      ]
+    },
+    {
+      "nombre": "Despedida",
+      "descripcion": "El usuario se despide.",
+      "ejemplos": [
+        "adiós", "chao", "hasta luego", "nos vemos", "bye", "me voy", "eso es todo", "hasta pronto",
+        "que tengas buen día", "hasta mañana", "nos vemos luego", "chau", "eso era todo, adiós", "ya terminé", "cuídate"
+      ]
+    },
+    {
+      "nombre": "Agradecimiento",
+      "descripcion": "El usuario agradece.",
+      "ejemplos": [
+        "gracias", "muchas gracias", "te lo agradezco", "perfecto, gracias", "excelente", "genial", "muy amable",
+        "mil gracias", "ok gracias", "qué bueno", "gracias por la información", "muy útil", "perfecto", "gracias, me sirvió",
+        "súper, gracias"
+      ]
+    },
+    {
+      "nombre": "Ayuda",
+      "descripcion": "El usuario pregunta qué puede hacer el asistente.",
+      "ejemplos": [
+        "¿qué puedes hacer?", "ayuda", "¿cómo funcionas?", "¿en qué me puedes ayudar?", "¿qué te puedo preguntar?",
+        "necesito ayuda", "¿para qué sirves?", "¿qué información tienes?", "opciones", "¿quién eres?",
+        "¿qué sabes hacer?", "no sé qué preguntar", "¿cómo te uso?", "¿de qué temas sabes?", "menú de opciones"
+      ]
+    },
+    {
+      "nombre": "FueraDeAlcance",
+      "descripcion": "Mensajes que no tienen relación con el turismo en Jimaní.",
+      "ejemplos": [
+        "¿cuál es la capital de Francia?", "¿quién ganó el partido de ayer?", "cuéntame un chiste", "¿qué hora es?",
+        "¿cómo está el dólar hoy?", "resuelve esta ecuación", "escríbeme un poema", "¿quién es el presidente de Estados Unidos?",
+        "recomiéndame una película", "¿cómo hago un pastel?", "¿qué es la fotosíntesis?", "necesito hacer mi tarea de matemáticas",
+        "¿cómo instalo Windows?", "¿cuál es tu color favorito?", "traduce esto al inglés", "¿me prestas dinero?",
+        "quiero comprar un celular", "¿qué tiempo hará mañana en Madrid?", "asdfgh", "jajaja", "¿cómo se programa en Python?",
+        "háblame de la segunda guerra mundial", "¿cuántos años tienes?", "dime las noticias de hoy",
+        "¿dónde compro zapatos en Nueva York?", "¿cómo arreglo mi carro?", "¿qué opinas de la política?",
+        "¿cuánto es 25 por 4?", "quiero aprender a bailar bachata", "¿cómo me hago una cuenta de correo?"
+      ]
+    }
+  ]
+}

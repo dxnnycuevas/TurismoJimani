@@ -31,9 +31,13 @@
         <label asp-for="NivelDificultad" class="form-label">Nivel de dificultad</label>
         <select asp-for="NivelDificultad" class="form-select">
             <option value="">-- Sin especificar --</option>
-            <option value="Fácil">Fácil</option>
-            <option value="Moderada">Moderada</option>
-            <option value="Difícil">Difícil</option>
+            <option value="Baja">Baja</option>
+            <option value="Media">Media</option>
+            <option value="Alta">Alta</option>
+            @if (!string.IsNullOrEmpty(Model.NivelDificultad) && !new[] { "Baja", "Media", "Alta" }.Contains(Model.NivelDificultad))
+            {
+                <option value="@Model.NivelDificultad">@Model.NivelDificultad</option>
+            }
         </select>
         <span asp-validation-for="NivelDificultad" class="text-danger small"></span>
     </div>

@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Asistente turístico";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="mb-0">Asistente turístico de Jimaní</h2>
+    <span id="chat-servicio" class="small text-muted">Comprobando el servicio de IA…</span>
+</div>
+
+@* Token antifalsificación que el script envía en cada mensaje *@
+@Html.AntiForgeryToken()
+
+<div id="chat-mensajes" class="chat-mensajes border rounded p-3 mb-3" aria-live="polite"></div>
+
+<form id="chat-formulario" class="d-flex gap-2" autocomplete="off"
+      data-url-enviar="@Url.Action("EnviarMensaje", "Asistente")"
+      data-url-estado="@Url.Action("Estado", "Asistente")">
+    <input id="chat-texto" class="form-control" maxlength="500"
+           placeholder="Escribe tu pregunta, por ejemplo: ¿Qué lugares puedo visitar?" aria-label="Mensaje" />
+    <button id="chat-enviar" type="submit" class="btn btn-primary">Enviar</button>
+</form>
+<div id="chat-estado" class="form-text" role="status"></div>
+
+@if (User.Identity?.IsAuthenticated != true)
+{
+    <p class="mt-4 small"><a asp-controller="Cuenta" asp-action="Login">Acceso de administración</a></p>
+}
+
+@section Scripts {
+    <script src="~/js/chat.js" asp-append-version="true"></script>
+}

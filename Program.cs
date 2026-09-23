@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using AppDonnyCuevas20210074.Data;
 using AppDonnyCuevas20210074.Helpers;
+using AppDonnyCuevas20210074.Services.Asistente;
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,27 @@ builder.Services.AddControllersWithViews(options =>
     mensajes.SetNonPropertyValueMustBeANumberAccessor(() => "Debe ser un número.");
 });
 
+// Asistente turístico: cliente HTTP del servicio BERT (Python) y servicio del chatbot
+builder.Services.AddMemoryCache();
+
+builder.Services.AddHttpClient<IClasificadorIntenciones, ClasificadorBert>(cliente =>
+{
+    var url = builder.Configuration["ServicioBert:Url"] ?? "http://127.0.0.1:8000/";
+    cliente.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+    cliente.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("ServicioBert:TimeoutSegundos", 15));
+});
+
+builder.Services.AddScoped<ChatbotService>();
+
+// Límite de mensajes al chat por dirección IP (el chat es público)
+builder.Services.AddRateLimiter(opciones =>
+{
+    opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    opciones.AddPolicy("chat", contexto => RateLimitPartition.GetFixedWindowLimiter(
+        contexto.Connection.RemoteIpAddress?.ToString() ?? "desconocido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+});
+
 // Cultura de República Dominicana (punto decimal, fechas dd/MM/yyyy)
 var cultura = new CultureInfo("es-DO");
 CultureInfo.DefaultThreadCurrentCulture = cultura;
@@ -85,6 +108,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseRateLimiter();
 
 // IMPORTANTE: primero autenticación y luego autorización
 app.UseAuthentication();

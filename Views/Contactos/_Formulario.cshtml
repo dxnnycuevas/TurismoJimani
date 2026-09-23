@@ -26,6 +26,10 @@
             <option value="Facebook">Facebook</option>
             <option value="Instagram">Instagram</option>
             <option value="Otro">Otro</option>
+            @if (!string.IsNullOrEmpty(Model.TipoContacto) && !new[] { "Teléfono", "WhatsApp", "Correo", "Sitio web", "Facebook", "Instagram", "Otro" }.Contains(Model.TipoContacto))
+            {
+                <option value="@Model.TipoContacto">@Model.TipoContacto</option>
+            }
         </select>
         <span asp-validation-for="TipoContacto" class="text-danger small"></span>
     </div>
