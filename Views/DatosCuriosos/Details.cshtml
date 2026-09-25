@@ -1,0 +1,25 @@
+@model DatoCurioso
+@{
+    ViewData["Title"] = "Detalle de dato curioso";
+}
+
+<h2>Detalle de dato curioso</h2>
+<hr />
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+        <dt class="col-sm-4">Dato</dt>
+        <dd class="col-sm-8"><span style="white-space:pre-line">@Model.Texto</span></dd>
+        <dt class="col-sm-4">Categoría</dt>
+        <dd class="col-sm-8">@Model.Categoria</dd>
+        <dt class="col-sm-4">Fuente</dt>
+        <dd class="col-sm-8">@Model.Fuente</dd>
+        <dt class="col-sm-4">Activo</dt>
+        <dd class="col-sm-8">@Formato.SiNo(Model.Activo)</dd>
+        </dl>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.IdDato" class="btn btn-primary">Editar</a>
+<a asp-action="Index" class="btn btn-secondary">Volver al listado</a>

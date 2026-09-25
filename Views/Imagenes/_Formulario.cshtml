@@ -40,6 +40,35 @@
     </div>
 
     <div class="col-12">
+        <h6 class="mt-2 mb-0">Crédito de la imagen</h6>
+        <div class="form-text">Se muestra junto a la foto en el sitio público para reconocer a su dueño original.</div>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Autor" class="form-label">Autor o dueño original</label>
+        <input asp-for="Autor" class="form-control" placeholder="Ej.: Juan Pérez" />
+        <span asp-validation-for="Autor" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-5">
+        <label asp-for="FuenteUrl" class="form-label">Enlace a la fuente original</label>
+        <input asp-for="FuenteUrl" class="form-control" type="url" placeholder="https://" />
+        <span asp-validation-for="FuenteUrl" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="Licencia" class="form-label">Licencia o permiso</label>
+        <input asp-for="Licencia" class="form-control" list="licencias-comunes" placeholder="Ej.: CC BY-SA 4.0" />
+        <datalist id="licencias-comunes">
+            <option value="Uso autorizado por el autor"></option>
+            <option value="CC BY 4.0"></option>
+            <option value="CC BY-SA 4.0"></option>
+            <option value="Dominio público"></option>
+        </datalist>
+        <span asp-validation-for="Licencia" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
         <div class="form-check">
             <input asp-for="EsPrincipal" class="form-check-input" />
             <label asp-for="EsPrincipal" class="form-check-label">Es la imagen principal</label>

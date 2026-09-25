@@ -1,0 +1,145 @@
+@* Ilustración que sustituye a la foto cuando un lugar o evento aún no tiene imagen.
+   Tipo: atractivo, alojamiento, restaurante, transporte, evento o lugar. La variante cambia el cielo. *@
+@model (string Tipo, int Variante)
+@{
+    var v = Math.Abs(Model.Variante) % 3;
+    var (cieloArriba, cieloAbajo, sol) = v switch
+    {
+        0 => ("#FFE2C2", "#F7A65A", "#FFF1C7"),  // amanecer
+        1 => ("#D8F0F5", "#9FD8E4", "#FFE7A8"),  // mediodía sobre el lago
+        _ => ("#F7A65A", "#D8452E", "#FFD1A0")   // atardecer
+    };
+    var idCielo = $"jm-cielo-{v}";
+    var etiqueta = Model.Tipo switch
+    {
+        "atractivo" => "Ilustración: lago, montañas y cactus",
+        "alojamiento" => "Ilustración: bohío junto a una palma",
+        "restaurante" => "Ilustración: caldero de sancocho",
+        "transporte" => "Ilustración: guagua en la carretera",
+        "evento" => "Ilustración: fiesta con tambora y banderines",
+        _ => "Ilustración: paisaje de Jimaní"
+    };
+}
+<svg class="jm-ilustracion" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" role="img" aria-label="@etiqueta" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="@idCielo" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="@cieloArriba" />
+            <stop offset="1" stop-color="@cieloAbajo" />
+        </linearGradient>
+    </defs>
+    <rect width="400" height="280" fill="url(#@idCielo)" />
+    <circle cx="@(v == 2 ? 90 : 310)" cy="@(v == 1 ? 62 : 88)" r="36" fill="@sol" opacity=".95" />
+
+    @switch (Model.Tipo)
+    {
+        case "atractivo":
+            <polygon points="0,170 60,118 110,150 170,92 232,140 292,104 352,146 400,118 400,280 0,280" fill="#1D5A8C" opacity=".88" />
+            <polygon points="0,185 80,150 140,176 210,140 270,172 330,150 400,176 400,280 0,280" fill="#002D62" opacity=".55" />
+            <rect y="186" width="400" height="44" fill="#6CC3D5" />
+            <path d="M20 200q15-6 30 0t30 0M150 212q15-6 30 0t30 0M280 200q15-6 30 0t30 0" stroke="#fff" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round" />
+            <path d="M0 236q100-26 200-2t200-8v54H0z" fill="#C2561A" />
+            <g fill="#2F5D46">
+                <rect x="322" y="178" width="14" height="66" rx="7" />
+                <path d="M322 214h-10a8 8 0 0 1-8-8v-14a5 5 0 0 1 10 0v10h8z" />
+                <path d="M336 204h9a7 7 0 0 0 7-7v-12a5 5 0 0 0-10 0v9h-6z" />
+            </g>
+            <ellipse cx="86" cy="248" rx="40" ry="22" fill="#8A4B26" />
+            <g fill="none" stroke="#F5E6D1" stroke-width="2.5" stroke-linecap="round">
+                <ellipse cx="86" cy="246" rx="13" ry="14" />
+                <circle cx="81" cy="243" r="2.4" />
+                <circle cx="91" cy="243" r="2.4" />
+                <ellipse cx="86" cy="252" rx="3" ry="2" />
+            </g>
+            break;
+
+        case "alojamiento":
+            <path d="M0 222q100-24 200-4t200-6v68H0z" fill="#C2561A" />
+            <path d="M0 250q120-18 250 0t150 0v30H0z" fill="#A94C14" />
+            <rect x="140" y="148" width="120" height="76" fill="#E9C79A" />
+            <path d="M152 148v76M168 148v76M184 148v76M216 148v76M232 148v76M248 148v76" stroke="#C99A63" stroke-width="3" />
+            <path d="M190 224v-34a10 10 0 0 1 20 0v34z" fill="#6B3A1C" />
+            <path d="M122 152L200 82l78 70z" fill="#8A5A2B" />
+            <path d="M150 140l50-45M170 146l30-51M230 146l-30-51M250 140l-50-45" stroke="#6B3A1C" stroke-width="3" />
+            <path d="M318 230q-8-60 6-110" stroke="#6B3A1C" stroke-width="7" fill="none" stroke-linecap="round" />
+            <g fill="#2F5D46">
+                <path d="M324 120q-30-10-52 8q26-4 52-8z" />
+                <path d="M324 120q26-18 54-4q-28 0-54 4z" />
+                <path d="M324 120q-8-26 10-44q-4 24-10 44z" />
+                <path d="M324 120q24 2 38 22q-22-12-38-22z" />
+            </g>
+            break;
+
+        case "restaurante":
+            <path d="M0 214h400v66H0z" fill="#A94C14" />
+            <rect y="206" width="400" height="10" fill="#C2561A" />
+            <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".8">
+                <path d="M170 92q-10-14 0-28t0-28" />
+                <path d="M200 88q-10-14 0-28t0-28" />
+                <path d="M230 92q-10-14 0-28t0-28" />
+            </g>
+            <path d="M124 118h152l-10 72a20 20 0 0 1-20 16H154a20 20 0 0 1-20-16z" fill="#3B2314" />
+            <ellipse cx="200" cy="118" rx="80" ry="14" fill="#5A3620" />
+            <ellipse cx="200" cy="118" rx="68" ry="9" fill="#E8A13A" />
+            <circle cx="180" cy="116" r="5" fill="#F4D06F" />
+            <circle cx="214" cy="119" r="6" fill="#7A4A2A" />
+            <circle cx="232" cy="115" r="4" fill="#3E8E4E" />
+            <path d="M118 128h-14a8 8 0 0 0 0 16h16M282 128h14a8 8 0 0 1 0 16h-16" stroke="#3B2314" stroke-width="6" fill="none" />
+            <path d="M268 64l-40 58" stroke="#8A5A2B" stroke-width="7" stroke-linecap="round" />
+            break;
+
+        case "transporte":
+            <polygon points="0,168 70,128 140,160 210,116 290,158 350,130 400,150 400,280 0,280" fill="#1D5A8C" opacity=".7" />
+            <path d="M0 196h400v84H0z" fill="#C2561A" />
+            <path d="M0 214h400v44H0z" fill="#4A3A30" />
+            <path d="M10 236h40M90 236h40M170 236h40M250 236h40M330 236h40" stroke="#F7E3B5" stroke-width="4" />
+            <rect x="110" y="140" width="190" height="78" rx="16" fill="#002D62" />
+            <rect x="110" y="186" width="190" height="10" fill="#CE1126" />
+            <g fill="#D8F0F5">
+                <rect x="124" y="152" width="34" height="26" rx="5" />
+                <rect x="166" y="152" width="34" height="26" rx="5" />
+                <rect x="208" y="152" width="34" height="26" rx="5" />
+                <rect x="252" y="152" width="36" height="26" rx="5" />
+            </g>
+            <circle cx="152" cy="220" r="15" fill="#2E2118" />
+            <circle cx="262" cy="220" r="15" fill="#2E2118" />
+            <circle cx="152" cy="220" r="6" fill="#C9CED6" />
+            <circle cx="262" cy="220" r="6" fill="#C9CED6" />
+            break;
+
+        case "evento":
+            <path d="M0 214q100-20 200-2t200-6v74H0z" fill="#C2561A" />
+            <path d="M-10 28q210 60 420 0" stroke="#3B2314" stroke-width="2" fill="none" />
+            <g>
+                <path d="M20 34l14 30 14-26z" fill="#CE1126" />
+                <path d="M64 44l14 30 14-26z" fill="#002D62" />
+                <path d="M108 51l14 30 14-26z" fill="#fff" />
+                <path d="M152 55l14 30 14-26z" fill="#EA7A28" />
+                <path d="M196 57l14 30 14-26z" fill="#CE1126" />
+                <path d="M240 55l14 30 14-26z" fill="#002D62" />
+                <path d="M284 51l14 30 14-26z" fill="#fff" />
+                <path d="M328 44l14 30 14-26z" fill="#EA7A28" />
+            </g>
+            <ellipse cx="160" cy="150" rx="56" ry="16" fill="#F5E6D1" />
+            <path d="M104 150v58c0 10 25 18 56 18s56-8 56-18v-58c0 10-25 16-56 16s-56-6-56-16z" fill="#C2561A" />
+            <path d="M110 160l20 62M140 166l14 60M180 166l-14 60M210 160l-20 62" stroke="#F5E6D1" stroke-width="3" />
+            <rect x="244" y="118" width="40" height="108" rx="18" fill="#C9CED6" />
+            <g fill="#8A94A3">
+                <circle cx="256" cy="140" r="2.5" /><circle cx="272" cy="140" r="2.5" />
+                <circle cx="256" cy="160" r="2.5" /><circle cx="272" cy="160" r="2.5" />
+                <circle cx="256" cy="180" r="2.5" /><circle cx="272" cy="180" r="2.5" />
+                <circle cx="256" cy="200" r="2.5" /><circle cx="272" cy="200" r="2.5" />
+            </g>
+            <path d="M300 110l-20 110" stroke="#3B2314" stroke-width="5" stroke-linecap="round" />
+            <g fill="#fff" opacity=".85">
+                <circle cx="70" cy="120" r="4" /><circle cx="330" cy="100" r="3" /><circle cx="360" cy="170" r="4" /><circle cx="40" cy="180" r="3" />
+            </g>
+            break;
+
+        default:
+            <path d="M0 200q100-30 200-6t200-10v96H0z" fill="#C2561A" />
+            <path d="M0 236q120-20 250 0t150 0v44H0z" fill="#A94C14" />
+            <path d="M200 70a34 34 0 0 1 34 34c0 26-34 64-34 64s-34-38-34-64a34 34 0 0 1 34-34z" fill="#CE1126" />
+            <circle cx="200" cy="104" r="13" fill="#fff" />
+            break;
+    }
+</svg>

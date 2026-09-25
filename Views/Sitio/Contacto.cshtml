@@ -1,0 +1,64 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuracion
+@{
+    ViewData["Title"] = "Contacto";
+    ViewData["Subtitulo"] = "Escríbenos o pregúntale al asistente virtual: te ayudamos a planificar tu visita.";
+    ViewData["Descripcion"] = "Datos de contacto de Turismo Jimaní y ubicación del municipio.";
+
+    var direccion = Configuracion["SitioPublico:Direccion"];
+    var telefono = Configuracion["SitioPublico:Telefono"];
+    var correo = Configuracion["SitioPublico:Correo"];
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="jm-panel jm-vidrio h-100">
+                    <h2 class="h5 mb-2">Datos de contacto</h2>
+                    <div class="lugar-dato"><i class="fa fa-map-marker-alt"></i><div><span class="etiqueta">Dirección</span>@(string.IsNullOrWhiteSpace(direccion) ? "Jimaní, provincia Independencia" : direccion)</div></div>
+                    @if (!string.IsNullOrWhiteSpace(telefono))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-phone-alt"></i><div><span class="etiqueta">Teléfono</span><a href="tel:@telefono">@telefono</a></div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(correo))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-envelope"></i><div><span class="etiqueta">Correo</span><a href="mailto:@correo">@correo</a></div></div>
+                    }
+                    <div class="lugar-dato"><i class="fa fa-robot"></i><div><span class="etiqueta">Asistente virtual</span>Disponible las 24 horas</div></div>
+
+                    <div class="text-center mt-4">
+                        <button type="button" class="jm-carita-boton" style="width:110px;height:110px" data-dato>
+                            <svg aria-hidden="true" style="width:70px;height:70px"><use href="#t-carita" /></svg>
+                            <span class="visually-hidden">Mostrar un dato curioso</span>
+                        </button>
+                        <p class="mt-3 mb-0 small">¿Esperando respuesta? Toca la carita.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="jm-formulario jm-vidrio h-100">
+                    <span class="jm-kicker"><i class="fa fa-comments"></i>Pregunta al instante</span>
+                    <h2 class="jm-h2 h3">Escríbele a nuestro asistente</h2>
+                    <p class="mb-4">
+                        ¿Buscas dónde dormir, qué visitar o cómo llegar a un lugar? El asistente virtual responde al momento.
+                        También puedes ver los datos de contacto de cada lugar en su página.
+                    </p>
+                    <form asp-controller="Asistente" asp-action="Index" method="get">
+                        <div class="form-floating mb-3">
+                            <textarea class="form-control" id="contacto-pregunta" name="pregunta" maxlength="500" required
+                                      placeholder="Escribe tu pregunta" style="height: 160px"></textarea>
+                            <label for="contacto-pregunta">Tu pregunta</label>
+                        </div>
+                        <button class="jm-btn w-100" type="submit"><i class="fa fa-paper-plane"></i>Preguntar al asistente</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="lugar-mapa jm-vidrio p-2">
+                    <iframe src="@SitioPublico.UrlMapa("Jimaní, Independencia, República Dominicana")" style="height: 420px;"
+                            title="Mapa de Jimaní" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

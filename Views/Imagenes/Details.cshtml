@@ -19,6 +19,12 @@
         <dd class="col-sm-8"><span style="white-space:pre-line">@Model.Descripcion</span></dd>
         <dt class="col-sm-4">Orden de visualización</dt>
         <dd class="col-sm-8">@Model.OrdenVisualizacion</dd>
+        <dt class="col-sm-4">Autor o dueño original</dt>
+        <dd class="col-sm-8">@Model.Autor</dd>
+        <dt class="col-sm-4">Fuente original</dt>
+        <dd class="col-sm-8">@if (SitioPublico.UrlSegura(Model.FuenteUrl) is string fuente) { <a href="@fuente" target="_blank" rel="noopener">@fuente</a> }</dd>
+        <dt class="col-sm-4">Licencia o permiso</dt>
+        <dd class="col-sm-8">@Model.Licencia</dd>
         <dt class="col-sm-4">Es la imagen principal</dt>
         <dd class="col-sm-8">@Formato.SiNo(Model.EsPrincipal)</dd>
         <dt class="col-sm-4">Fecha de creación</dt>

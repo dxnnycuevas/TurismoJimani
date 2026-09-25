@@ -1,0 +1,58 @@
+@model AppDonnyCuevas20210074.Models.Sitio.EventosViewModel
+@{
+    ViewData["Title"] = "Eventos y promociones";
+    ViewData["Subtitulo"] = "Fiestas patronales, festivales, actividades culturales y ofertas de los negocios de Jimaní.";
+    ViewData["Descripcion"] = "Agenda de eventos, fiestas patronales y promociones en Jimaní.";
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <!-- Próximos / anteriores -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div class="jm-filtros d-flex flex-wrap gap-2" role="group" aria-label="Momento">
+                <a asp-action="Eventos" asp-route-tipo="@Model.Tipo" class="jm-chip @(!Model.Anteriores ? "activo" : "")">
+                    <i class="fa fa-calendar-alt"></i>Próximos
+                </a>
+                <a asp-action="Eventos" asp-route-tipo="@Model.Tipo" asp-route-anteriores="true" class="jm-chip @(Model.Anteriores ? "activo" : "")">
+                    <i class="fa fa-history"></i>Anteriores
+                </a>
+            </div>
+            @if (Model.Tipos.Count > 0)
+            {
+                <div class="jm-filtros d-flex flex-wrap gap-2" role="group" aria-label="Tipo de evento">
+                    <a asp-action="Eventos" asp-route-anteriores="@(Model.Anteriores ? "true" : null)" class="jm-chip @(Model.Tipo == null ? "activo" : "")">Todos</a>
+                    @foreach (var tipo in Model.Tipos)
+                    {
+                        <a asp-action="Eventos" asp-route-tipo="@tipo" asp-route-anteriores="@(Model.Anteriores ? "true" : null)"
+                           class="jm-chip @(tipo == Model.Tipo ? "activo" : "")"><i class="fa @SitioPublico.IconoEvento(tipo)"></i>@tipo</a>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (Model.Eventos.Count == 0)
+        {
+            <div class="jm-vacio jm-vidrio">
+                <svg aria-hidden="true"><use href="#t-tambora" /></svg>
+                <h2 class="h4">@(Model.Anteriores ? "Todavía no hay eventos anteriores" : "No hay eventos próximos por ahora")</h2>
+                <p class="mb-3">Muy pronto publicaremos las fiestas patronales, festivales y promociones de Jimaní.</p>
+                <button type="button" class="jm-btn jm-btn--azul" data-dato>
+                    <svg class="jm-simbolo-icono" aria-hidden="true"><use href="#t-carita" /></svg>Mientras tanto, un dato curioso
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @for (var i = 0; i < Model.Eventos.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4 jm-revelar">
+                        <partial name="_TarjetaEvento" model="(Model.Eventos[i], i)" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<partial name="_BannerAsistente" />

@@ -11,6 +11,9 @@
     const servicio = document.getElementById("chat-servicio");
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
 
+    // En el sitio público no se muestra la intención detectada (es información técnica)
+    const publico = formulario.dataset.mostrarDetalle === "false";
+
     // Identificador de la conversación (lo asigna el servidor en la primera respuesta)
     let idSesion = null;
 
@@ -50,7 +53,7 @@
             const respuesta = await fetch(formulario.dataset.urlEstado);
             const datos = await respuesta.json();
             servicio.textContent = datos.disponible ? "Servicio de IA: conectado" : "Servicio de IA: no disponible";
-            servicio.className = "small " + (datos.disponible ? "text-success" : "text-danger");
+            servicio.className = "small " + (publico ? "text-white" : datos.disponible ? "text-success" : "text-danger");
         } catch {
             servicio.textContent = "";
         }
@@ -86,7 +89,7 @@
                 agregarMensaje("Asistente", datos?.error ?? "No pude procesar tu mensaje. Intenta de nuevo.", null, true);
             } else {
                 idSesion = datos.idSesion;
-                const detalle = datos.intencion
+                const detalle = datos.intencion && !publico
                     ? `Intención detectada: ${datos.intencion} (${Math.round(datos.confianza * 100)}%)`
                     : null;
                 const esError = ["ErrorIA", "ErrorBD", "Error"].includes(datos.tipoRespuesta);
@@ -96,6 +99,7 @@
         } catch {
             agregarMensaje("Asistente", "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.", null, true);
         } finally {
+            window.renovarTemporizadorSesion?.(); // el mensaje también cuenta como actividad
             procesando(false);
             entrada.focus();
         }
@@ -109,8 +113,29 @@
         }
     });
 
+    // Botones de preguntas sugeridas
+    document.querySelectorAll("[data-pregunta]").forEach((boton) => {
+        boton.addEventListener("click", () => {
+            if (entrada.disabled) return;
+            entrada.value = boton.dataset.pregunta;
+            formulario.requestSubmit();
+        });
+    });
+
     agregarMensaje("Asistente",
         "¡Hola! Soy el asistente turístico de Jimaní. Pregúntame por atractivos, alojamientos, restaurantes, rutas o transporte.");
     comprobarServicio();
-    entrada.focus();
+
+    // Pregunta enviada desde otra página del sitio (/Asistente?pregunta=...): se envía una sola vez
+    const parametros = new URLSearchParams(window.location.search);
+    const preguntaInicial = parametros.get("pregunta")?.trim().slice(0, 500);
+    if (preguntaInicial) {
+        parametros.delete("pregunta");
+        const consulta = parametros.toString();
+        history.replaceState(null, "", window.location.pathname + (consulta ? "?" + consulta : ""));
+        entrada.value = preguntaInicial;
+        formulario.requestSubmit();
+    } else {
+        entrada.focus();
+    }
 })();

@@ -28,6 +28,8 @@ namespace AppDonnyCuevas20210074.Data
         public DbSet<EjemploIntencion> EjemplosIntencion => Set<EjemploIntencion>();
         public DbSet<DocumentoConocimiento> DocumentosConocimiento => Set<DocumentoConocimiento>();
         public DbSet<ConsultaAsistente> ConsultasAsistente => Set<ConsultaAsistente>();
+        public DbSet<Evento> Eventos => Set<Evento>();
+        public DbSet<DatoCurioso> DatosCuriosos => Set<DatoCurioso>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -84,6 +86,15 @@ namespace AppDonnyCuevas20210074.Data
                 .WithMany()
                 .HasForeignKey(r => r.IdLugarDestino)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ---- Eventos: el lugar es opcional; si se borra el lugar, el evento se conserva ----
+            modelBuilder.Entity<Evento>()
+                .HasOne(e => e.Lugar)
+                .WithMany()
+                .HasForeignKey(e => e.IdLugar)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Evento>().HasIndex(e => e.FechaInicio);
 
             // ---- CHECK constraint (DiaSemana BETWEEN 1 AND 7) ----
             modelBuilder.Entity<Horario>()

@@ -1,0 +1,51 @@
+@model Evento
+@{
+    ViewData["Title"] = "Detalle de evento";
+}
+
+<h2>Detalle de evento</h2>
+<hr />
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+        <dt class="col-sm-4">Título</dt>
+        <dd class="col-sm-8">@Model.Titulo</dd>
+        <dt class="col-sm-4">Tipo</dt>
+        <dd class="col-sm-8">@Model.Tipo</dd>
+        <dt class="col-sm-4">Resumen</dt>
+        <dd class="col-sm-8"><span style="white-space:pre-line">@Model.Resumen</span></dd>
+        <dt class="col-sm-4">Contenido</dt>
+        <dd class="col-sm-8"><span style="white-space:pre-line">@Model.Contenido</span></dd>
+        <dt class="col-sm-4">Inicio</dt>
+        <dd class="col-sm-8">@Formato.Fecha(Model.FechaInicio)</dd>
+        <dt class="col-sm-4">Fin</dt>
+        <dd class="col-sm-8">@Formato.Fecha(Model.FechaFin)</dd>
+        <dt class="col-sm-4">Lugar registrado</dt>
+        <dd class="col-sm-8">@Model.Lugar?.Nombre</dd>
+        <dt class="col-sm-4">Lugar (texto)</dt>
+        <dd class="col-sm-8">@Model.LugarTexto</dd>
+        <dt class="col-sm-4">Organizador</dt>
+        <dd class="col-sm-8">@Model.Organizador</dd>
+        <dt class="col-sm-4">Enlace externo</dt>
+        <dd class="col-sm-8">@if (SitioPublico.UrlSegura(Model.EnlaceExterno) is string enlace) { <a href="@enlace" target="_blank" rel="noopener">@enlace</a> }</dd>
+        <dt class="col-sm-4">Imagen</dt>
+        <dd class="col-sm-8">@if (SitioPublico.UrlSegura(Model.ImagenUrl) is string imagen) { <img src="@imagen" alt="" class="img-thumbnail" style="max-height:120px" /> }</dd>
+        <dt class="col-sm-4">Autor de la imagen</dt>
+        <dd class="col-sm-8">@Model.ImagenAutor</dd>
+        <dt class="col-sm-4">Fuente de la imagen</dt>
+        <dd class="col-sm-8">@if (SitioPublico.UrlSegura(Model.ImagenFuenteUrl) is string fuente) { <a href="@fuente" target="_blank" rel="noopener">@fuente</a> }</dd>
+        <dt class="col-sm-4">Publicado</dt>
+        <dd class="col-sm-8">@Formato.SiNo(Model.Publicado)</dd>
+        <dt class="col-sm-4">Destacado</dt>
+        <dd class="col-sm-8">@Formato.SiNo(Model.Destacado)</dd>
+        <dt class="col-sm-4">Fecha de creación</dt>
+        <dd class="col-sm-8">@Formato.Fecha(Model.FechaCreacion)</dd>
+        <dt class="col-sm-4">Última actualización</dt>
+        <dd class="col-sm-8">@Formato.Fecha(Model.FechaActualizacion)</dd>
+        </dl>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.IdEvento" class="btn btn-primary">Editar</a>
+<a asp-action="Index" class="btn btn-secondary">Volver al listado</a>

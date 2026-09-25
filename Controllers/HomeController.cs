@@ -30,6 +30,8 @@ public class HomeController : Controller
             ("Rutas", "Rutas", await _context.Rutas.CountAsync(), false),
             ("Categorías", "Categorias", await _context.Categorias.CountAsync(), false),
             ("Servicios", "Servicios", await _context.Servicios.CountAsync(), false),
+            ("Eventos y promociones", "Eventos", await _context.Eventos.CountAsync(), false),
+            ("Datos curiosos", "DatosCuriosos", await _context.DatosCuriosos.CountAsync(), false),
             ("Imágenes", "Imagenes", await _context.Imagenes.CountAsync(), false),
             ("Horarios", "Horarios", await _context.Horarios.CountAsync(), false),
             ("Contactos", "Contactos", await _context.Contactos.CountAsync(), false),

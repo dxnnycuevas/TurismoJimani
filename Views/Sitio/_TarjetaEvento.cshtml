@@ -1,0 +1,45 @@
+@* Tarjeta de un evento o promoción (estilo entrada de blog) *@
+@model (Evento Evento, int Indice)
+@{
+    var evento = Model.Evento;
+    var imagen = SitioPublico.ImagenEvento(evento);
+    var credito = SitioPublico.Credito(evento.ImagenAutor);
+    var lugar = SitioPublico.LugarEvento(evento);
+    var ilustracion = evento.Tipo == "Promoción" ? "restaurante" : "evento";
+}
+<article class="jm-evento jm-vidrio jm-liquido">
+    <a asp-controller="Sitio" asp-action="Evento" asp-route-id="@evento.IdEvento" class="jm-evento__media" tabindex="-1" aria-hidden="true">
+        @if (imagen != null)
+        {
+            <img src="@imagen" alt="" loading="lazy" />
+        }
+        else
+        {
+            <partial name="_Ilustracion" model="(ilustracion, Model.Indice)" />
+        }
+        <span class="jm-fecha"><strong>@SitioPublico.DiaEvento(evento)</strong><span>@SitioPublico.MesEvento(evento)</span></span>
+        @if (imagen != null && !string.IsNullOrEmpty(credito))
+        {
+            <span class="jm-credito" title="@credito">@credito</span>
+        }
+    </a>
+    <div class="jm-evento__cuerpo">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="jm-etiqueta"><i class="fa @SitioPublico.IconoEvento(evento.Tipo)"></i>@evento.Tipo</span>
+            @if (evento.Destacado)
+            {
+                <span class="jm-etiqueta jm-etiqueta--solida"><i class="fa fa-star"></i>Destacado</span>
+            }
+        </div>
+        <h3><a asp-controller="Sitio" asp-action="Evento" asp-route-id="@evento.IdEvento">@evento.Titulo</a></h3>
+        <ul class="jm-evento__datos">
+            <li><i class="fa fa-clock"></i><span>@SitioPublico.FechaEvento(evento)</span></li>
+            @if (!string.IsNullOrWhiteSpace(lugar))
+            {
+                <li><i class="fa fa-map-marker-alt"></i><span>@lugar</span></li>
+            }
+        </ul>
+        <p>@Formato.Recortar(evento.Resumen, 140)</p>
+        <a asp-controller="Sitio" asp-action="Evento" asp-route-id="@evento.IdEvento" class="jm-enlace">Leer más <i class="fa fa-arrow-right"></i></a>
+    </div>
+</article>

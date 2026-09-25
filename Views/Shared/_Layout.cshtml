@@ -1,3 +1,9 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuracion
+@{
+    // El menú del panel y el cierre por inactividad solo aplican al personal (Administrador o Editor)
+    var esPersonal = RolesSistema.EsPersonal(User);
+    var minutosInactividad = Configuracion.GetValue("Sesion:MinutosInactividad", 20);
+}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,7 +16,7 @@
     <link rel="stylesheet" href="~/AppDonnyCuevas20210074.styles.css" asp-append-version="true" />
 </head>
 <body>
-    @if (User.Identity?.IsAuthenticated == true)
+    @if (esPersonal)
     {
         <header>
             <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
@@ -39,6 +45,13 @@
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Transportes" asp-action="Index">Transportes</a></li>
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Rutas" asp-action="Index">Rutas</a></li>
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Servicios" asp-action="Index">Servicios</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Contenido</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Eventos" asp-action="Index">Eventos y promociones</a></li>
+                                    <li><a class="dropdown-item" asp-controller="DatosCuriosos" asp-action="Index">Datos curiosos</a></li>
+                                </ul>
+                            </li>
                             @if (User.IsInRole("Administrador"))
                             {
                                 <li class="nav-item dropdown">
@@ -63,6 +76,7 @@
                         </ul>
 
                         <div class="d-flex align-items-center gap-2">
+                            <a asp-controller="Sitio" asp-action="Index" class="btn btn-outline-primary btn-sm" target="_blank">Ver sitio público</a>
                             <span class="text-muted small">@User.Identity?.Name</span>
                             <form asp-controller="Cuenta" asp-action="Logout" method="post" class="m-0">
                                 <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
@@ -102,6 +116,13 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (esPersonal)
+    {
+        @* Cierra la pantalla cuando la sesión del servidor ya caducó por inactividad *@
+        <script id="sesion-inactividad" src="~/js/sesion.js" asp-append-version="true"
+                data-minutos="@minutosInactividad"
+                data-url-expirada="@Url.Action("Login", "Cuenta", new { expirada = true })"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

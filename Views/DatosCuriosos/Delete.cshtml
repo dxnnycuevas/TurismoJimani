@@ -1,0 +1,26 @@
+@model DatoCurioso
+@{
+    ViewData["Title"] = "Eliminar dato curioso";
+}
+
+<h2>Eliminar dato curioso</h2>
+<hr />
+
+<div class="alert alert-danger">¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+        <dt class="col-sm-4">Dato</dt>
+        <dd class="col-sm-8">@Model.Texto</dd>
+        <dt class="col-sm-4">Categoría</dt>
+        <dd class="col-sm-8">@Model.Categoria</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.IdDato" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

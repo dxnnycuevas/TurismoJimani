@@ -1,0 +1,273 @@
+@model AppDonnyCuevas20210074.Models.Sitio.InicioViewModel
+@{
+    ViewData["Title"] = "Inicio";
+    var est = Model.Estadisticas;
+    var urlMapa = Url.Content("~/sitio/img/mapa-jimani-cartoart.webp");
+
+    // Clave de filtro por tipo de atractivo (evita acentos y espacios en los atributos)
+    var clavesTipo = Model.TiposAtractivo
+        .Select((tipo, i) => (tipo, clave: "tipo-" + i))
+        .ToDictionary(t => t.tipo, t => t.clave);
+
+    string ConTotal(int total) => total > 0 ? $" ({total})" : "";
+
+    // "Planifica tu visita": (icono FA o símbolo propio, título, texto, acción, tipo de lugar)
+    var servicios = new[]
+    {
+        ("fa-mountain", "", "Atractivos" + ConTotal(est.Atractivos), "Lago, montañas, áreas protegidas y sitios arqueológicos.", "Lugares", "atractivos"),
+        ("", "t-bohio", "Alojamientos" + ConTotal(est.Alojamientos), "Dónde dormir: precios, entrada y salida, y reservas.", "Lugares", "alojamientos"),
+        ("fa-utensils", "", "Restaurantes" + ConTotal(est.Restaurantes), "Sabores locales, horarios y servicio a domicilio.", "Lugares", "restaurantes"),
+        ("fa-bus", "", "Transporte" + ConTotal(est.Transportes), "Guaguas y opciones para moverte por la zona.", "Lugares", "transporte"),
+        ("fa-route", "", "Rutas" + ConTotal(est.Rutas), "Recorridos con distancia, duración y dificultad.", "Rutas", ""),
+        ("", "t-sol", "Eventos" + ConTotal(est.Eventos), "Fiestas patronales, festivales y promociones.", "Eventos", ""),
+    };
+}
+
+@section Portada {
+    <section class="jm-hero" aria-labelledby="titulo-portada">
+        <div class="jm-manchas" aria-hidden="true">
+            <span class="jm-mancha jm-mancha--naranja" style="width:520px;height:520px;top:-140px;right:-120px"></span>
+            <span class="jm-mancha jm-mancha--larimar" style="width:360px;height:360px;bottom:-60px;left:30%;opacity:.4"></span>
+            <span class="jm-mancha jm-mancha--rojo" style="width:260px;height:260px;top:40%;left:-80px"></span>
+        </div>
+        <svg class="jm-hero__sol" aria-hidden="true"><use href="#t-sol" /></svg>
+        <div class="jm-patron" aria-hidden="true"></div>
+
+        <div class="container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6 jm-revelar">
+                    <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-carita" /></svg>Provincia Independencia · República Dominicana</span>
+                    <h1 id="titulo-portada" class="jm-hero__titulo">Jimaní, tierra de <em>sol</em>, lago y memoria <span class="rojo">taína</span></h1>
+                    <p class="jm-hero__texto">
+                        Entre el Lago Enriquillo y la Sierra de Bahoruco: caritas talladas en piedra, paisajes áridos,
+                        fiestas patronales y la vida de la frontera. Descubre qué ver, dónde dormir y qué comer.
+                    </p>
+
+                    <form asp-action="Lugares" method="get" role="search" class="jm-buscador jm-vidrio">
+                        <label for="portada-buscar" class="visually-hidden">Buscar lugares</label>
+                        <i class="fa fa-search text-danger" aria-hidden="true"></i>
+                        <input id="portada-buscar" name="buscar" type="text" placeholder="Busca un lugar: Lago Enriquillo, Las Caritas…" />
+                        <button type="submit" class="jm-btn">Buscar</button>
+                    </form>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-action="Lugares" class="jm-btn jm-btn--azul"><i class="fa fa-compass"></i>Explorar destinos</a>
+                        <a asp-action="Sorpresa" class="jm-btn jm-btn--vidrio"><i class="fa fa-dice text-danger"></i>Sorpréndeme</a>
+                    </div>
+
+                    <ul class="jm-hero__cifras">
+                        <li class="jm-vidrio"><strong data-contar="@est.Lugares">@est.Lugares</strong><span>lugares</span></li>
+                        <li class="jm-vidrio"><strong data-contar="@est.Atractivos">@est.Atractivos</strong><span>atractivos</span></li>
+                        <li class="jm-vidrio"><strong data-contar="@est.Eventos">@est.Eventos</strong><span>eventos próximos</span></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-6 jm-revelar">
+                    <figure class="jm-poster jm-vidrio">
+                        <button type="button" class="jm-poster__boton" data-bs-toggle="modal" data-bs-target="#modalMapa" aria-label="Ver el mapa de Jimaní en grande">
+                            <img src="@urlMapa" alt="Mapa de las calles de Jimaní, Independencia (18.49° N, 71.85° W)" width="1333" height="2000" fetchpriority="high" />
+                        </button>
+                        <figcaption>
+                            Mapa: <a href="https://www.cartoart.net" target="_blank" rel="noopener">CartoArt</a>
+                            · &copy; OpenStreetMap · &copy; OpenFreeMap
+                        </figcaption>
+                        <span class="jm-poster__chip jm-poster__chip--coordenadas jm-vidrio"><i class="fa fa-map-pin text-danger"></i>18.49° N, 71.85° W</span>
+                        <button type="button" class="jm-poster__chip jm-poster__chip--dato jm-vidrio" data-dato>
+                            <svg aria-hidden="true"><use href="#t-carita" /></svg>¿Sabías que…?
+                        </button>
+                    </figure>
+                </div>
+            </div>
+        </div>
+
+        <svg class="jm-dunas" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 46 Q240 8 480 40 T960 36 T1440 26 V90 H0Z" fill="#f7a65a" opacity=".45" />
+            <path d="M0 68 Q300 36 620 62 T1200 54 T1440 58 V90 H0Z" fill="var(--arena)" />
+        </svg>
+    </section>
+
+    <!-- Mapa en grande -->
+    <div class="modal fade" id="modalMapa" tabindex="-1" aria-labelledby="modalMapaTitulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content jm-vidrio border-0">
+                <div class="modal-header border-0">
+                    <h2 class="modal-title h5" id="modalMapaTitulo">Mapa de Jimaní</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body pt-0 text-center">
+                    <img src="@urlMapa" alt="Mapa de las calles de Jimaní" class="img-fluid rounded-3" style="max-height:78vh" />
+                    <p class="small mt-2 mb-0 text-body-secondary">
+                        Póster de <a href="https://www.cartoart.net" target="_blank" rel="noopener">CartoArt</a>.
+                        Datos del mapa &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a>, estilo de OpenFreeMap.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ¿Sabías que...? -->
+<section class="jm-seccion pt-4" aria-labelledby="titulo-dato">
+    <div class="container">
+        <div class="jm-dato jm-vidrio jm-revelar">
+            <div>
+                <button type="button" class="jm-carita-boton" data-dato data-dato-destino="#dato-portada" aria-controls="dato-portada">
+                    <svg aria-hidden="true"><use href="#t-carita" /></svg>
+                    <span class="visually-hidden">Mostrar un dato curioso al azar</span>
+                </button>
+                <span class="jm-carita-boton__texto">¡Tócame!</span>
+            </div>
+            <div id="dato-portada" aria-live="polite">
+                <span class="jm-kicker" id="titulo-dato"><svg aria-hidden="true"><use href="#t-espiral" /></svg>¿Sabías que…?</span>
+                <p class="jm-dato__texto" data-dato-texto>Toca la carita taína y descubre un dato al azar sobre Jimaní, su naturaleza y su cultura.</p>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="jm-etiqueta" data-dato-categoria>Dato curioso</span>
+                    <small class="text-body-secondary" data-dato-fuente></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Destinos -->
+<section class="jm-seccion pt-3" aria-labelledby="titulo-destinos">
+    <div class="container">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 jm-revelar">
+            <div class="jm-titulo-seccion jm-titulo-seccion--izq mb-0">
+                <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-lago" /></svg>Destinos</span>
+                <h2 id="titulo-destinos" class="jm-h2">Lugares que tienes que ver</h2>
+                <p class="jm-subtitulo">Naturaleza, historia y paisajes de la Hoya de Enriquillo.</p>
+            </div>
+            <a asp-action="Lugares" asp-route-tipo="atractivos" class="jm-btn jm-btn--contorno">Ver todos <i class="fa fa-arrow-right"></i></a>
+        </div>
+
+        @if (Model.Destinos.Count == 0)
+        {
+            <div class="jm-vacio jm-vidrio">
+                <svg aria-hidden="true"><use href="#t-cactus" /></svg>
+                <p class="mb-0">Pronto publicaremos los atractivos de Jimaní.</p>
+            </div>
+        }
+        else
+        {
+            @if (clavesTipo.Count > 1)
+            {
+                <div class="jm-filtros d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filtrar destinos por tipo">
+                    <button type="button" class="jm-chip activo" data-filtro="*" aria-pressed="true">Todos</button>
+                    @foreach (var (tipo, clave) in clavesTipo)
+                    {
+                        <button type="button" class="jm-chip" data-filtro="@clave" aria-pressed="false">@tipo</button>
+                    }
+                </div>
+            }
+
+            <div class="row g-4">
+                @for (var i = 0; i < Model.Destinos.Count; i++)
+                {
+                    var lugar = Model.Destinos[i];
+                    var clave = lugar.Atractivo?.TipoAtractivo is string t && clavesTipo.TryGetValue(t, out var c) ? c : "";
+                    <div class="col-md-6 col-lg-4 destino jm-revelar" data-tipo="@clave">
+                        <partial name="_TarjetaLugar" model="(lugar, i)" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Eventos y promociones -->
+<section class="jm-seccion jm-seccion--azul" aria-labelledby="titulo-eventos">
+    <div class="jm-patron jm-patron--claro" aria-hidden="true"></div>
+    <div class="container">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 jm-revelar">
+            <div class="jm-titulo-seccion jm-titulo-seccion--izq mb-0">
+                <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-tambora" /></svg>Agenda</span>
+                <h2 id="titulo-eventos" class="jm-h2">Eventos y promociones</h2>
+                <p class="jm-subtitulo">Fiestas patronales, festivales, actividades culturales y ofertas de negocios locales.</p>
+            </div>
+            <a asp-action="Eventos" class="jm-btn jm-btn--vidrio">Ver la agenda <i class="fa fa-arrow-right"></i></a>
+        </div>
+
+        @if (Model.Eventos.Count == 0)
+        {
+            <div class="jm-vacio jm-vidrio jm-vidrio--oscuro jm-revelar">
+                <svg aria-hidden="true" style="color:var(--naranja-300)"><use href="#t-tambora" /></svg>
+                <p class="mb-0">Muy pronto publicaremos las próximas fiestas patronales y actividades de Jimaní.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @for (var i = 0; i < Model.Eventos.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4 jm-revelar">
+                        <partial name="_TarjetaEvento" model="(Model.Eventos[i], i)" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<partial name="_SimbologiaTaina" />
+
+<!-- Planifica tu visita -->
+<section class="jm-seccion" aria-labelledby="titulo-planifica">
+    <div class="jm-manchas" aria-hidden="true">
+        <span class="jm-mancha jm-mancha--naranja" style="width:420px;height:420px;top:-100px;left:-140px;opacity:.35"></span>
+    </div>
+    <div class="container">
+        <div class="jm-titulo-seccion jm-revelar">
+            <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-cactus" /></svg>Planifica tu visita</span>
+            <h2 id="titulo-planifica" class="jm-h2">Todo lo que necesitas en un solo lugar</h2>
+        </div>
+        <div class="row g-4">
+            @foreach (var (iconoFa, simbolo, titulo, texto, accion, tipo) in servicios)
+            {
+                <div class="col-md-6 col-lg-4 jm-revelar">
+                    <a asp-controller="Sitio" asp-action="@accion" asp-route-tipo="@(string.IsNullOrEmpty(tipo) ? null : tipo)" class="jm-servicio jm-vidrio jm-liquido">
+                        <span class="jm-servicio__icono" aria-hidden="true">
+                            @if (string.IsNullOrEmpty(simbolo))
+                            {
+                                <i class="fa @iconoFa"></i>
+                            }
+                            else
+                            {
+                                <svg><use href="#@simbolo" /></svg>
+                            }
+                        </span>
+                        <div>
+                            <h3>@titulo</h3>
+                            <p>@texto</p>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<partial name="_CulturaDominicana" />
+
+@if (Model.Rutas.Count > 0)
+{
+    <!-- Rutas recomendadas -->
+    <section class="jm-seccion" aria-labelledby="titulo-rutas">
+        <div class="container">
+            <div class="jm-titulo-seccion jm-revelar">
+                <span class="jm-kicker"><i class="fa fa-route"></i>Rutas</span>
+                <h2 id="titulo-rutas" class="jm-h2">Rutas recomendadas</h2>
+            </div>
+            <div class="row g-4">
+                @foreach (var ruta in Model.Rutas)
+                {
+                    <div class="col-md-6 col-lg-4 jm-revelar">
+                        <partial name="_TarjetaRuta" model="ruta" />
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<partial name="_BannerAsistente" />

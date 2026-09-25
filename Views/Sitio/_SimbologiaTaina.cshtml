@@ -1,0 +1,45 @@
+@* Simbología taína: tarjetas que giran al tocarlas y muestran su significado *@
+@{
+    var simbolos = new[]
+    {
+        ("t-carita", "Caritas", "Rostros tallados en la roca por los taínos. En Las Caritas, frente al Lago Enriquillo, se conservan petroglifos de este tipo."),
+        ("t-sol", "El sol", "Según los relatos taínos recogidos por fray Ramón Pané, el sol y la luna salieron de una cueva sagrada. En los petroglifos aparece como un rostro con rayos."),
+        ("t-rana", "Atabey", "Madre de las aguas dulces y de la fertilidad. Suele representarse en posición de rana, con brazos y piernas flexionados."),
+        ("t-cemi", "Cemí", "Espíritus protectores y los objetos que los representaban. Las piedras de tres puntas se asocian con Yúcahu, espíritu de la yuca."),
+        ("t-espiral", "Espiral", "Muy frecuente en el arte rupestre taíno. Se ha interpretado como agua, viento o el paso del tiempo; no hay una lectura única."),
+        ("t-huracan", "Huracán", "La palabra viene del taíno. Las tormentas se asociaban con Guabancex, representada con los brazos en espiral."),
+    };
+}
+<section class="jm-seccion jm-seccion--arena" aria-labelledby="titulo-simbologia">
+    <div class="jm-patron"></div>
+    <div class="container">
+        <div class="jm-titulo-seccion jm-revelar">
+            <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-espiral" /></svg>Herencia taína</span>
+            <h2 id="titulo-simbologia" class="jm-h2">Simbología taína</h2>
+            <p class="jm-subtitulo">Los taínos dejaron su memoria tallada en piedra. Toca cada símbolo para conocer su significado.</p>
+        </div>
+        <div class="row g-4">
+            @foreach (var (icono, nombre, texto) in simbolos)
+            {
+                <div class="col-6 col-md-4 col-xl-2 jm-revelar">
+                    <button type="button" class="jm-simbolo" aria-pressed="false">
+                        <span class="jm-simbolo__interior">
+                            <span class="jm-simbolo__cara jm-simbolo__frente jm-vidrio">
+                                <svg aria-hidden="true"><use href="#@icono" /></svg>
+                                <strong>@nombre</strong>
+                                <small>Toca para descubrir</small>
+                            </span>
+                            <span class="jm-simbolo__cara jm-simbolo__reverso jm-vidrio">
+                                <strong>@nombre</strong>
+                                <span>@texto</span>
+                            </span>
+                        </span>
+                    </button>
+                </div>
+            }
+        </div>
+        <p class="text-center small mt-4 mb-0 text-body-secondary">
+            Los dibujos son interpretaciones estilizadas de motivos taínos, hechas para este sitio.
+        </p>
+    </div>
+</section>

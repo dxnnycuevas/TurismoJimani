@@ -28,6 +28,16 @@ namespace AppDonnyCuevas20210074.Models
 
         public int OrdenVisualizacion { get; set; } = 0;
 
+        // Crédito al dueño original de la foto (se muestra en el sitio público)
+        [StringLength(150)]
+        public string? Autor { get; set; }
+
+        [StringLength(500)]
+        public string? FuenteUrl { get; set; }
+
+        [StringLength(100)]
+        public string? Licencia { get; set; }
+
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         [ForeignKey(nameof(IdLugar))]

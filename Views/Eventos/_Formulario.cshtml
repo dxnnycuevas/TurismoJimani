@@ -1,0 +1,104 @@
+@model Evento
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <label asp-for="Titulo" class="form-label">Título</label>
+        <input asp-for="Titulo" class="form-control" placeholder="Ej.: Fiestas patronales de Jimaní 2026" />
+        <span asp-validation-for="Titulo" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Tipo" class="form-label">Tipo</label>
+        <select asp-for="Tipo" class="form-select" asp-items="ViewBag.ListaTipo"></select>
+        <div class="form-text">Use «Promoción» para ofertas de negocios locales.</div>
+        <span asp-validation-for="Tipo" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="Resumen" class="form-label">Resumen</label>
+        <textarea asp-for="Resumen" class="form-control" rows="2" placeholder="Una o dos frases que aparecen en la tarjeta del evento"></textarea>
+        <span asp-validation-for="Resumen" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="Contenido" class="form-label">Contenido</label>
+        <textarea asp-for="Contenido" class="form-control" rows="8" placeholder="Programa, actividades, historia de la celebración…"></textarea>
+        <div class="form-text">Se muestra como una entrada de blog. Deje una línea en blanco entre párrafos.</div>
+        <span asp-validation-for="Contenido" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="FechaInicio" class="form-label">Fecha y hora de inicio</label>
+        <input asp-for="FechaInicio" class="form-control" type="datetime-local" />
+        <span asp-validation-for="FechaInicio" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="FechaFin" class="form-label">Fecha y hora de fin (opcional)</label>
+        <input asp-for="FechaFin" class="form-control" type="datetime-local" />
+        <span asp-validation-for="FechaFin" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="IdLugar" class="form-label">Lugar registrado (opcional)</label>
+        <select asp-for="IdLugar" class="form-select" asp-items="ViewBag.ListaIdLugar">
+            <option value="">-- Ninguno --</option>
+        </select>
+        <span asp-validation-for="IdLugar" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="LugarTexto" class="form-label">Lugar o dirección (texto)</label>
+        <input asp-for="LugarTexto" class="form-control" placeholder="Ej.: Parque central de Jimaní" />
+        <div class="form-text">Úselo si el lugar no está en la lista.</div>
+        <span asp-validation-for="LugarTexto" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Organizador" class="form-label">Organizador</label>
+        <input asp-for="Organizador" class="form-control" />
+        <span asp-validation-for="Organizador" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="EnlaceExterno" class="form-label">Enlace externo (opcional)</label>
+        <input asp-for="EnlaceExterno" class="form-control" type="url" placeholder="https://" />
+        <span asp-validation-for="EnlaceExterno" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
+        <h6 class="mt-2 mb-0">Imagen</h6>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="ImagenUrl" class="form-label">URL de la imagen</label>
+        <input asp-for="ImagenUrl" class="form-control" type="url" placeholder="https://" />
+        <div class="form-text">Si se deja vacía, el sitio muestra una ilustración.</div>
+        <span asp-validation-for="ImagenUrl" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="ImagenAutor" class="form-label">Autor o dueño de la imagen</label>
+        <input asp-for="ImagenAutor" class="form-control" placeholder="Ej.: Ayuntamiento de Jimaní" />
+        <span asp-validation-for="ImagenAutor" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="ImagenFuenteUrl" class="form-label">Enlace a la fuente original</label>
+        <input asp-for="ImagenFuenteUrl" class="form-control" type="url" placeholder="https://" />
+        <span asp-validation-for="ImagenFuenteUrl" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check form-check-inline">
+            <input asp-for="Publicado" class="form-check-input" />
+            <label asp-for="Publicado" class="form-check-label">Publicado en el sitio</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input asp-for="Destacado" class="form-check-input" />
+            <label asp-for="Destacado" class="form-check-label">Destacado en la portada</label>
+        </div>
+    </div>
+</div>

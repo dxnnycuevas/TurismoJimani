@@ -1,29 +1,82 @@
 @{
-    ViewData["Title"] = "Asistente turístico";
-}
+    // Los visitantes (con o sin cuenta) ven el chat dentro del sitio público; el personal, dentro del panel
+    var esPublico = !RolesSistema.EsPersonal(User);
+    if (esPublico)
+    {
+        Layout = "_LayoutSitio";
+    }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-    <h2 class="mb-0">Asistente turístico de Jimaní</h2>
-    <span id="chat-servicio" class="small text-muted">Comprobando el servicio de IA…</span>
-</div>
+    ViewData["Title"] = esPublico ? "Asistente virtual" : "Asistente turístico";
+    ViewData["Subtitulo"] = "Pregunta por atractivos, alojamientos, restaurantes, rutas y transporte en Jimaní, a cualquier hora.";
+    var sugerencias = new[]
+    {
+        "¿Qué lugares puedo visitar?",
+        "¿Dónde puedo hospedarme?",
+        "¿Dónde puedo comer?",
+        "¿Cómo llego al Lago Enriquillo?"
+    };
+}
 
 @* Token antifalsificación que el script envía en cada mensaje *@
 @Html.AntiForgeryToken()
 
-<div id="chat-mensajes" class="chat-mensajes border rounded p-3 mb-3" aria-live="polite"></div>
-
-<form id="chat-formulario" class="d-flex gap-2" autocomplete="off"
-      data-url-enviar="@Url.Action("EnviarMensaje", "Asistente")"
-      data-url-estado="@Url.Action("Estado", "Asistente")">
-    <input id="chat-texto" class="form-control" maxlength="500"
-           placeholder="Escribe tu pregunta, por ejemplo: ¿Qué lugares puedo visitar?" aria-label="Mensaje" />
-    <button id="chat-enviar" type="submit" class="btn btn-primary">Enviar</button>
-</form>
-<div id="chat-estado" class="form-text" role="status"></div>
-
-@if (User.Identity?.IsAuthenticated != true)
+@if (esPublico)
 {
-    <p class="mt-4 small"><a asp-controller="Cuenta" asp-action="Login">Acceso de administración</a></p>
+    <section class="jm-seccion pt-4">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-9">
+                    <div class="chat-caja jm-vidrio">
+                        <div class="chat-cabecera d-flex flex-wrap justify-content-between align-items-center gap-2 px-4 py-3">
+                            <span class="fw-bold d-flex align-items-center gap-2">
+                                <svg class="jm-simbolo-icono" style="width:1.8em;height:1.8em;color:var(--naranja-300)" aria-hidden="true"><use href="#t-carita" /></svg>
+                                Asistente de Turismo Jimaní
+                            </span>
+                            <span id="chat-servicio" class="small">Comprobando el servicio…</span>
+                        </div>
+
+                        <div id="chat-mensajes" class="chat-mensajes p-4" aria-live="polite"></div>
+
+                        <div class="p-3" style="background:rgba(255,255,255,.7)">
+                            <div class="chat-sugerencias d-flex flex-wrap gap-2 mb-3">
+                                @foreach (var sugerencia in sugerencias)
+                                {
+                                    <button type="button" class="jm-chip" data-pregunta="@sugerencia">@sugerencia</button>
+                                }
+                            </div>
+                            <form id="chat-formulario" class="jm-buscador jm-vidrio m-0 mw-100" autocomplete="off"
+                                  data-url-enviar="@Url.Action("EnviarMensaje", "Asistente")"
+                                  data-url-estado="@Url.Action("Estado", "Asistente")"
+                                  data-mostrar-detalle="false">
+                                <i class="fa fa-comments text-danger" aria-hidden="true"></i>
+                                <input id="chat-texto" maxlength="500" placeholder="Escribe tu pregunta…" aria-label="Mensaje" />
+                                <button id="chat-enviar" type="submit" class="jm-btn"><i class="fa fa-paper-plane"></i>Enviar</button>
+                            </form>
+                            <div id="chat-estado" class="form-text ps-3" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 class="mb-0">Asistente turístico de Jimaní</h2>
+        <span id="chat-servicio" class="small text-muted">Comprobando el servicio de IA…</span>
+    </div>
+
+    <div id="chat-mensajes" class="chat-mensajes border rounded p-3 mb-3" aria-live="polite"></div>
+
+    <form id="chat-formulario" class="d-flex gap-2" autocomplete="off"
+          data-url-enviar="@Url.Action("EnviarMensaje", "Asistente")"
+          data-url-estado="@Url.Action("Estado", "Asistente")">
+        <input id="chat-texto" class="form-control" maxlength="500"
+               placeholder="Escribe tu pregunta, por ejemplo: ¿Qué lugares puedo visitar?" aria-label="Mensaje" />
+        <button id="chat-enviar" type="submit" class="btn btn-primary">Enviar</button>
+    </form>
+    <div id="chat-estado" class="form-text" role="status"></div>
 }
 
 @section Scripts {

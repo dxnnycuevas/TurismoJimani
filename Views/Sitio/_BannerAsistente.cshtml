@@ -1,0 +1,25 @@
+@* Llamado al asistente virtual: la pregunta se envía al chat *@
+<section class="jm-seccion jm-seccion--azul jm-banner-asistente" aria-labelledby="titulo-asistente">
+    <div class="jm-patron jm-patron--claro"></div>
+    <div class="jm-manchas" aria-hidden="true">
+        <span class="jm-mancha jm-mancha--naranja" style="width:420px;height:420px;top:-160px;left:-120px;opacity:.35"></span>
+        <span class="jm-mancha jm-mancha--larimar" style="width:360px;height:360px;bottom:-140px;right:-60px;opacity:.4"></span>
+    </div>
+    <div class="container text-center">
+        <div class="jm-revelar mx-auto" style="max-width: 46rem;">
+            <span class="jm-kicker"><i class="fa fa-robot"></i>Asistente virtual</span>
+            <h2 id="titulo-asistente" class="jm-h2">¿Tienes alguna pregunta sobre Jimaní?</h2>
+            <p class="jm-subtitulo">
+                Nuestro asistente con inteligencia artificial te responde al momento sobre atractivos,
+                alojamientos, restaurantes, rutas y transporte.
+            </p>
+            <form asp-controller="Asistente" asp-action="Index" method="get" class="jm-buscador jm-vidrio" role="search">
+                <label for="banner-pregunta" class="visually-hidden">Tu pregunta</label>
+                <i class="fa fa-comments text-danger" aria-hidden="true"></i>
+                <input id="banner-pregunta" name="pregunta" maxlength="500" required type="text"
+                       placeholder="Ej.: ¿Qué puedo visitar en Jimaní?" />
+                <button type="submit" class="jm-btn">Preguntar</button>
+            </form>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,48 @@
+@* Tarjeta de un lugar (vidrio líquido). El índice varía la ilustración cuando no hay foto. *@
+@model (Lugar Lugar, int Indice)
+@{
+    var lugar = Model.Lugar;
+    var atractivo = lugar.Atractivo;
+    var imagen = SitioPublico.ImagenPrincipal(lugar);
+    var credito = imagen != null ? SitioPublico.Credito(imagen) : "";
+}
+<article class="jm-tarjeta jm-vidrio jm-liquido">
+    <a asp-controller="Sitio" asp-action="Lugar" asp-route-id="@lugar.IdLugar" class="jm-tarjeta__media" tabindex="-1" aria-hidden="true">
+        @if (imagen != null)
+        {
+            <img src="@imagen.UrlImagen" alt="" loading="lazy" />
+        }
+        else
+        {
+            <partial name="_Ilustracion" model="(SitioPublico.Ilustracion(lugar), Model.Indice)" />
+        }
+        <span class="jm-etiqueta"><i class="fa @SitioPublico.Icono(lugar)"></i>@SitioPublico.Tipo(lugar)</span>
+        @if (!string.IsNullOrEmpty(credito))
+        {
+            <span class="jm-credito" title="@credito">@credito</span>
+        }
+    </a>
+    <div class="jm-tarjeta__cuerpo">
+        @if (atractivo?.Destacado == true)
+        {
+            <span class="jm-destacado mb-1"><i class="fa fa-star me-1"></i>Destacado</span>
+        }
+        <h3><a asp-controller="Sitio" asp-action="Lugar" asp-route-id="@lugar.IdLugar">@lugar.Nombre</a></h3>
+        <p>@Formato.Recortar(lugar.DescripcionCorta, 130)</p>
+        <ul class="jm-meta">
+            @if (atractivo?.NivelDificultad is string dificultad)
+            {
+                <li><i class="fa fa-signal"></i>Dificultad @dificultad.ToLowerInvariant()</li>
+            }
+            @if (atractivo is { DuracionVisitaMinutos: > 0 })
+            {
+                <li><i class="fa fa-clock"></i>@SitioPublico.Duracion(atractivo.DuracionVisitaMinutos)</li>
+            }
+            @if (!string.IsNullOrWhiteSpace(lugar.Municipio))
+            {
+                <li><i class="fa fa-map-marker-alt"></i>@lugar.Municipio</li>
+            }
+        </ul>
+        <a asp-controller="Sitio" asp-action="Lugar" asp-route-id="@lugar.IdLugar" class="jm-enlace">Descubrir <i class="fa fa-arrow-right"></i></a>
+    </div>
+</article>

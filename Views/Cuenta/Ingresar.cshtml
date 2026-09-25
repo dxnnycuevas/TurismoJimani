@@ -1,0 +1,58 @@
+@{
+    Layout = "_LayoutSitio";
+    ViewData["Title"] = "Iniciar sesión";
+    ViewData["Subtitulo"] = "Entra con tu cuenta de Turismo Jimaní.";
+    ViewData["Descripcion"] = "Inicia sesión en tu cuenta de Turismo Jimaní.";
+}
+
+<section class="jm-seccion pt-4">
+    <div class="jm-manchas" aria-hidden="true">
+        <span class="jm-mancha jm-mancha--naranja" style="width:420px;height:420px;top:0;right:-140px;opacity:.4"></span>
+        <span class="jm-mancha jm-mancha--larimar" style="width:340px;height:340px;bottom:-80px;left:-60px;opacity:.35"></span>
+    </div>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-xl-5">
+                <div class="jm-formulario jm-vidrio">
+                    <div class="text-center mb-4">
+                        <span class="jm-marca__icono mx-auto mb-3" style="width:64px;height:64px"><svg aria-hidden="true" style="width:44px;height:44px"><use href="#t-carita" /></svg></span>
+                        <h2 class="jm-h2 h3 mb-1">¡Qué bueno verte!</h2>
+                        <p class="text-body-secondary mb-0">Inicia sesión para continuar.</p>
+                    </div>
+
+                    @if (ViewBag.Error is string error)
+                    {
+                        <div class="alert alert-danger" role="alert">@error</div>
+                    }
+
+                    <form asp-controller="Cuenta" asp-action="Ingresar" asp-route-returnUrl="@ViewBag.ReturnUrl" method="post">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="email" id="correo" name="correo" value="@ViewBag.Correo" class="form-control"
+                                           placeholder="Correo electrónico" autocomplete="email" required />
+                                    <label for="correo">Correo electrónico</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="password" id="contrasena" name="contrasena" class="form-control"
+                                           placeholder="Contraseña" autocomplete="current-password" required />
+                                    <label for="contrasena">Contraseña</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button class="jm-btn w-100" type="submit"><i class="fa fa-sign-in-alt"></i>Iniciar sesión</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <p class="text-center mt-4 mb-0">
+                        ¿No tienes una cuenta?
+                        <a asp-controller="Cuenta" asp-action="Registro" asp-route-returnUrl="@ViewBag.ReturnUrl" class="fw-semibold">Regístrate</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,85 @@
+@model AppDonnyCuevas20210074.Models.Sitio.LugaresViewModel
+@{
+    var tipoActual = SitioPublico.TiposLugar.FirstOrDefault(t => t.Clave == Model.Tipo);
+    ViewData["Title"] = tipoActual.Nombre ?? "Destinos";
+    ViewData["Subtitulo"] = "Busca por nombre o filtra por tipo y categoría: qué visitar, dónde dormir, dónde comer y cómo moverte.";
+    ViewData["Descripcion"] = "Atractivos, alojamientos, restaurantes y transporte en Jimaní.";
+
+    var hayFiltros = !string.IsNullOrEmpty(Model.Buscar) || Model.Categoria.HasValue;
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <!-- Búsqueda y filtros -->
+        <div class="jm-panel jm-vidrio mb-4">
+            <div class="jm-filtros d-flex flex-wrap gap-2 mb-3">
+                <a asp-action="Lugares" asp-route-buscar="@Model.Buscar" asp-route-categoria="@Model.Categoria"
+                   class="jm-chip @(tipoActual.Clave == null ? "activo" : "")">Todos</a>
+                @foreach (var tipo in SitioPublico.TiposLugar)
+                {
+                    <a asp-action="Lugares" asp-route-tipo="@tipo.Clave" asp-route-buscar="@Model.Buscar" asp-route-categoria="@Model.Categoria"
+                       class="jm-chip @(tipo.Clave == tipoActual.Clave ? "activo" : "")"><i class="fa @tipo.Icono"></i>@tipo.Nombre</a>
+                }
+                <a asp-action="Sorpresa" class="jm-chip ms-md-auto"><i class="fa fa-dice text-danger"></i>Sorpréndeme</a>
+            </div>
+            <form asp-action="Lugares" method="get" role="search">
+                <input type="hidden" name="tipo" value="@Model.Tipo" />
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label for="buscar" class="form-label small fw-semibold">Buscar</label>
+                        <input id="buscar" name="buscar" value="@Model.Buscar" class="form-control rounded-pill px-4" placeholder="Nombre, descripción o municipio" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="categoria" class="form-label small fw-semibold">Categoría</label>
+                        <select id="categoria" name="categoria" class="form-select rounded-pill px-4">
+                            <option value="">Todas las categorías</option>
+                            @foreach (var c in Model.Categorias)
+                            {
+                                <option value="@c.IdCategoria" selected="@(c.IdCategoria == Model.Categoria)">@c.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="jm-btn"><i class="fa fa-search"></i>Buscar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+            <p class="mb-0">
+                <strong class="text-danger">@Model.Lugares.Count</strong> @(Model.Lugares.Count == 1 ? "lugar encontrado" : "lugares encontrados")
+                @if (!string.IsNullOrEmpty(Model.Buscar))
+                {
+                    <span>para «<strong>@Model.Buscar</strong>»</span>
+                }
+            </p>
+            @if (hayFiltros)
+            {
+                <a asp-action="Lugares" asp-route-tipo="@Model.Tipo" class="small"><i class="fa fa-times me-1"></i>Quitar búsqueda</a>
+            }
+        </div>
+
+        @if (Model.Lugares.Count == 0)
+        {
+            <div class="jm-vacio jm-vidrio">
+                <svg aria-hidden="true"><use href="#t-cactus" /></svg>
+                <h2 class="h4">No encontramos lugares con esos filtros</h2>
+                <p class="mb-0">Prueba con otra palabra o <a asp-controller="Asistente" asp-action="Index">pregúntale al asistente virtual</a>.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @for (var i = 0; i < Model.Lugares.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4 jm-revelar">
+                        <partial name="_TarjetaLugar" model="(Model.Lugares[i], i)" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<partial name="_BannerAsistente" />

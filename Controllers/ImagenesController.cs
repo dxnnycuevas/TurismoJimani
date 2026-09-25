@@ -1,4 +1,5 @@
 using AppDonnyCuevas20210074.Data;
+using AppDonnyCuevas20210074.Helpers;
 using AppDonnyCuevas20210074.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -57,7 +58,7 @@ public class ImagenesController : Controller
     // POST: Imagenes/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("UrlImagen,IdLugar,TextoAlternativo,Descripcion,OrdenVisualizacion,EsPrincipal")] Imagen entidad)
+    public async Task<IActionResult> Create([Bind("UrlImagen,IdLugar,TextoAlternativo,Descripcion,OrdenVisualizacion,EsPrincipal,Autor,FuenteUrl,Licencia")] Imagen entidad)
     {
         Validar(entidad);
 
@@ -99,7 +100,8 @@ public class ImagenesController : Controller
 
         // Solo se actualizan los campos del formulario
         var actualizado = await TryUpdateModelAsync(entidad, string.Empty,
-            x => x.UrlImagen, x => x.IdLugar, x => x.TextoAlternativo, x => x.Descripcion, x => x.OrdenVisualizacion, x => x.EsPrincipal);
+            x => x.UrlImagen, x => x.IdLugar, x => x.TextoAlternativo, x => x.Descripcion, x => x.OrdenVisualizacion, x => x.EsPrincipal,
+            x => x.Autor, x => x.FuenteUrl, x => x.Licencia);
 
         Validar(entidad);
 
@@ -154,7 +156,12 @@ public class ImagenesController : Controller
 
     private void Validar(Imagen entidad)
     {
-        // Sin validaciones adicionales
+        // El sitio público solo muestra direcciones http(s)
+        if (!string.IsNullOrWhiteSpace(entidad.UrlImagen) && SitioPublico.UrlSegura(entidad.UrlImagen) == null)
+            ModelState.AddModelError(nameof(entidad.UrlImagen), "Escriba una dirección que empiece con http:// o https://.");
+
+        if (!string.IsNullOrWhiteSpace(entidad.FuenteUrl) && SitioPublico.UrlSegura(entidad.FuenteUrl) == null)
+            ModelState.AddModelError(nameof(entidad.FuenteUrl), "Escriba una dirección que empiece con http:// o https://.");
     }
 
     private async Task CargarListasAsync(Imagen? entidad = null)

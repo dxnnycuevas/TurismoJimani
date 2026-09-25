@@ -1,0 +1,162 @@
+@model AppDonnyCuevas20210074.Models.Sitio.EventoViewModel
+@{
+    var evento = Model.Evento;
+    ViewData["Title"] = evento.Titulo;
+    ViewData["Subtitulo"] = evento.Resumen;
+    ViewData["Descripcion"] = evento.Resumen;
+    ViewData["MigaTexto"] = "Eventos";
+    ViewData["MigaUrl"] = Url.Action("Eventos", "Sitio");
+
+    var imagen = SitioPublico.ImagenEvento(evento);
+    var fuenteImagen = SitioPublico.UrlSegura(evento.ImagenFuenteUrl);
+    var credito = SitioPublico.Credito(evento.ImagenAutor);
+    var enlace = SitioPublico.UrlSegura(evento.EnlaceExterno);
+    var lugar = SitioPublico.LugarEvento(evento);
+    var urlMapa = evento.Lugar != null ? SitioPublico.UrlMapa(evento.Lugar.Latitud, evento.Lugar.Longitud, 14) : null;
+    var proximo = SitioPublico.EsProximo(evento);
+    var ilustracion = evento.Tipo == "Promoción" ? "restaurante" : "evento";
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        @if (!evento.Publicado)
+        {
+            <div class="jm-alerta mb-4"><i class="fa fa-eye-slash text-danger me-2"></i>Vista previa: este evento todavía no está publicado.</div>
+        }
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <article class="jm-articulo jm-vidrio">
+                    <div class="jm-foto mb-4">
+                        @if (imagen != null)
+                        {
+                            <img src="@imagen" alt="@evento.Titulo" class="jm-articulo__portada" />
+                            @if (!string.IsNullOrEmpty(credito))
+                            {
+                                <span class="jm-credito">
+                                    @if (fuenteImagen != null)
+                                    {
+                                        <a href="@fuenteImagen" target="_blank" rel="noopener">@credito</a>
+                                    }
+                                    else
+                                    {
+                                        @credito
+                                    }
+                                </span>
+                            }
+                        }
+                        else
+                        {
+                            <div class="jm-articulo__portada-ilustracion">
+                                <partial name="_Ilustracion" model="(ilustracion, evento.IdEvento)" />
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="jm-etiqueta"><i class="fa @SitioPublico.IconoEvento(evento.Tipo)"></i>@evento.Tipo</span>
+                        @if (evento.Destacado)
+                        {
+                            <span class="jm-etiqueta jm-etiqueta--solida"><i class="fa fa-star"></i>Destacado</span>
+                        }
+                        @if (!proximo)
+                        {
+                            <span class="jm-etiqueta" style="background:rgba(0,45,98,.1);color:var(--azul-900)"><i class="fa fa-history"></i>Ya se realizó</span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(evento.Contenido))
+                    {
+                        <div class="jm-articulo__contenido">@evento.Contenido</div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(evento.Resumen))
+                    {
+                        <p class="jm-articulo__contenido">@evento.Resumen</p>
+                    }
+
+                    @if (urlMapa != null)
+                    {
+                        <h2 class="h4 mt-5 mb-3"><i class="fa fa-map-marked-alt text-danger me-2"></i>Ubicación</h2>
+                        <div class="lugar-mapa">
+                            <iframe src="@urlMapa" title="Mapa de @lugar" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                    }
+                </article>
+            </div>
+
+            <aside class="col-lg-4">
+                <div class="jm-panel jm-vidrio mb-4">
+                    <h2 class="h5 mb-3">Detalles</h2>
+                    <div class="lugar-dato"><i class="fa fa-clock"></i><div><span class="etiqueta">Cuándo</span>@SitioPublico.FechaEvento(evento)</div></div>
+                    @if (!string.IsNullOrWhiteSpace(lugar))
+                    {
+                        <div class="lugar-dato">
+                            <i class="fa fa-map-marker-alt"></i>
+                            <div>
+                                <span class="etiqueta">Dónde</span>
+                                @if (evento.Lugar != null)
+                                {
+                                    <a asp-action="Lugar" asp-route-id="@evento.IdLugar">@evento.Lugar.Nombre</a>
+                                    @if (!string.IsNullOrWhiteSpace(evento.LugarTexto))
+                                    {
+                                        <div class="small text-body-secondary">@evento.LugarTexto</div>
+                                    }
+                                }
+                                else
+                                {
+                                    @lugar
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(evento.Organizador))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-users"></i><div><span class="etiqueta">Organiza</span>@evento.Organizador</div></div>
+                    }
+
+                    <div class="d-grid gap-2 mt-4">
+                        @if (proximo && evento.Publicado)
+                        {
+                            <a asp-action="Calendario" asp-route-id="@evento.IdEvento" class="jm-btn"><i class="fa fa-calendar-plus"></i>Agregar a mi calendario</a>
+                        }
+                        @if (enlace != null)
+                        {
+                            <a href="@enlace" target="_blank" rel="noopener" class="jm-btn jm-btn--azul"><i class="fa fa-external-link-alt"></i>Más información</a>
+                        }
+                        <a asp-controller="Asistente" asp-action="Index" asp-route-pregunta="¿Qué puedo hacer en Jimaní durante @evento.Titulo?"
+                           class="jm-btn jm-btn--contorno"><i class="fa fa-comments"></i>Preguntar al asistente</a>
+                    </div>
+                </div>
+
+                <div class="jm-panel jm-vidrio text-center">
+                    <button type="button" class="jm-carita-boton" style="width:110px;height:110px" data-dato>
+                        <svg aria-hidden="true" style="width:70px;height:70px"><use href="#t-carita" /></svg>
+                        <span class="visually-hidden">Mostrar un dato curioso</span>
+                    </button>
+                    <p class="mt-3 mb-0 small">Toca la carita y aprende algo nuevo de Jimaní.</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+@if (Model.Otros.Count > 0)
+{
+    <section class="jm-seccion jm-seccion--arena">
+        <div class="jm-patron" aria-hidden="true"></div>
+        <div class="container">
+            <div class="jm-titulo-seccion">
+                <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-sol" /></svg>Agenda</span>
+                <h2 class="jm-h2">Otros eventos próximos</h2>
+            </div>
+            <div class="row g-4 justify-content-center">
+                @for (var i = 0; i < Model.Otros.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <partial name="_TarjetaEvento" model="(Model.Otros[i], i + 1)" />
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}

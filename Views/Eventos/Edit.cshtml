@@ -1,0 +1,20 @@
+@model Evento
+@{
+    ViewData["Title"] = "Editar evento";
+}
+
+<h2>Editar evento</h2>
+<hr />
+
+<form asp-action="Edit" asp-route-id="@Model.IdEvento" method="post">
+    <partial name="_Formulario" model="Model" />
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

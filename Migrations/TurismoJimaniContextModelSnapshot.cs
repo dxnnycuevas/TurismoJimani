@@ -224,6 +224,36 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("Contactos");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.DatoCurioso", b =>
+                {
+                    b.Property<int>("IdDato")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdDato"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Fuente")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("IdDato");
+
+                    b.ToTable("DatosCuriosos");
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.DocumentoConocimiento", b =>
                 {
                     b.Property<int>("IdDocumento")
@@ -290,6 +320,85 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("EjemplosIntencion");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Evento", b =>
+                {
+                    b.Property<int>("IdEvento")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdEvento"));
+
+                    b.Property<string>("Contenido")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Destacado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("EnlaceExterno")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaFin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("IdLugar")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImagenAutor")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ImagenFuenteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ImagenUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("LugarTexto")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Organizador")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("Publicado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Resumen")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("IdEvento");
+
+                    b.HasIndex("FechaInicio");
+
+                    b.HasIndex("IdLugar");
+
+                    b.ToTable("Eventos");
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Horario", b =>
                 {
                     b.Property<int>("IdHorario")
@@ -331,6 +440,10 @@ namespace AppDonnyCuevas20210074.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdImagen"));
 
+                    b.Property<string>("Autor")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -341,8 +454,16 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FuenteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int>("IdLugar")
                         .HasColumnType("int");
+
+                    b.Property<string>("Licencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("OrdenVisualizacion")
                         .HasColumnType("int");
@@ -768,6 +889,16 @@ namespace AppDonnyCuevas20210074.Migrations
                         .IsRequired();
 
                     b.Navigation("Intencion");
+                });
+
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Evento", b =>
+                {
+                    b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
+                        .WithMany()
+                        .HasForeignKey("IdLugar")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Lugar");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Horario", b =>

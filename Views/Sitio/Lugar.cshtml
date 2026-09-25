@@ -1,0 +1,393 @@
+@model AppDonnyCuevas20210074.Models.Sitio.LugarViewModel
+@{
+    var lugar = Model.Lugar;
+    ViewData["Title"] = lugar.Nombre;
+    ViewData["Subtitulo"] = lugar.DescripcionCorta;
+    ViewData["Descripcion"] = lugar.DescripcionCorta;
+    ViewData["MigaTexto"] = "Destinos";
+    ViewData["MigaUrl"] = Url.Action("Lugares", "Sitio");
+
+    var imagenes = SitioPublico.ImagenesOrdenadas(lugar).ToList();
+    var ubicacion = SitioPublico.Ubicacion(lugar);
+    var urlMapa = SitioPublico.UrlMapa(lugar.Latitud, lugar.Longitud);
+    var urlComoLlegar = SitioPublico.UrlComoLlegar(lugar.Latitud, lugar.Longitud);
+    var horarios = lugar.Horarios.OrderBy(h => h.DiaSemana).ToList();
+    var contactos = lugar.Contactos.OrderByDescending(c => c.EsPrincipal).ThenBy(c => c.TipoContacto).ToList();
+
+    var sitioWeb = SitioPublico.UrlSegura(lugar.SitioWeb);
+    var enlaceReserva = SitioPublico.UrlSegura(lugar.Alojamiento?.EnlaceReserva);
+    var enlaceMenu = SitioPublico.UrlSegura(lugar.Restaurante?.EnlaceMenu);
+
+    var atractivo = lugar.Atractivo;
+    var alojamiento = lugar.Alojamiento;
+    var restaurante = lugar.Restaurante;
+    var transporte = lugar.Transporte;
+
+    // Enlace adecuado según el tipo de contacto (teléfono, correo, web o texto)
+    string? EnlaceContacto(Contacto c)
+    {
+        var tipo = c.TipoContacto.ToLowerInvariant();
+        if (tipo.Contains("tel") || tipo.Contains("whats") || tipo.Contains("cel")) return "tel:" + c.ValorContacto;
+        if (tipo.Contains("correo") || tipo.Contains("mail")) return "mailto:" + c.ValorContacto;
+        return SitioPublico.UrlSegura(c.ValorContacto);
+    }
+}
+
+@* Crédito de una foto: "Foto: Autor · Licencia", enlazado a la fuente original si existe *@
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent CreditoFoto(Imagen imagen)
+    {
+        var credito = SitioPublico.Credito(imagen);
+        if (string.IsNullOrEmpty(credito)) return Microsoft.AspNetCore.Html.HtmlString.Empty;
+
+        var fuente = SitioPublico.UrlSegura(imagen.FuenteUrl);
+        var contenido = new Microsoft.AspNetCore.Html.HtmlContentBuilder();
+        contenido.AppendHtml("<span class=\"jm-credito\">");
+        if (fuente != null)
+        {
+            contenido.AppendHtml("<a target=\"_blank\" rel=\"noopener\" href=\"");
+            contenido.Append(fuente);
+            contenido.AppendHtml("\">");
+            contenido.Append(credito);
+            contenido.AppendHtml("</a>");
+        }
+        else
+        {
+            contenido.Append(credito);
+        }
+        contenido.AppendHtml("</span>");
+        return contenido;
+    }
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Contenido principal -->
+            <div class="col-lg-8">
+                <div class="jm-articulo jm-vidrio">
+                    @if (imagenes.Count > 1)
+                    {
+                        <div id="galeriaLugar" class="carousel slide lugar-galeria mb-4" data-bs-ride="carousel">
+                            <div class="carousel-indicators">
+                                @for (var i = 0; i < imagenes.Count; i++)
+                                {
+                                    <button type="button" data-bs-target="#galeriaLugar" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")"
+                                            aria-label="Imagen @(i + 1)"></button>
+                                }
+                            </div>
+                            <div class="carousel-inner">
+                                @for (var i = 0; i < imagenes.Count; i++)
+                                {
+                                    <div class="carousel-item @(i == 0 ? "active" : "")">
+                                        <img src="@imagenes[i].UrlImagen" alt="@(imagenes[i].TextoAlternativo ?? lugar.Nombre)" />
+                                        @CreditoFoto(imagenes[i])
+                                        @if (!string.IsNullOrWhiteSpace(imagenes[i].Descripcion))
+                                        {
+                                            <div class="carousel-caption d-none d-md-block"><p class="mb-0">@imagenes[i].Descripcion</p></div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#galeriaLugar" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Anterior</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#galeriaLugar" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Siguiente</span>
+                            </button>
+                        </div>
+                    }
+                    else if (imagenes.Count == 1)
+                    {
+                        <div class="jm-foto mb-4">
+                            <img class="lugar-portada" src="@imagenes[0].UrlImagen" alt="@(imagenes[0].TextoAlternativo ?? lugar.Nombre)" />
+                            @CreditoFoto(imagenes[0])
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="lugar-portada-ilustracion mb-4">
+                            <partial name="_Ilustracion" model="(SitioPublico.Ilustracion(lugar), lugar.IdLugar)" />
+                        </div>
+                    }
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="jm-etiqueta"><i class="fa @SitioPublico.Icono(lugar)"></i>@SitioPublico.Tipo(lugar)</span>
+                        @if (atractivo?.Destacado == true)
+                        {
+                            <span class="jm-etiqueta jm-etiqueta--solida"><i class="fa fa-star"></i>Destacado</span>
+                        }
+                        @foreach (var categoria in lugar.Categorias.OrderBy(c => c.Nombre))
+                        {
+                            <a class="lugar-etiqueta mb-0" asp-action="Lugares" asp-route-categoria="@categoria.IdCategoria">@categoria.Nombre</a>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(ubicacion))
+                    {
+                        <p class="mb-4 text-body-secondary"><i class="fa fa-map-marker-alt text-danger me-2"></i>@ubicacion</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(lugar.Descripcion))
+                    {
+                        <p class="jm-articulo__contenido mb-4">@lugar.Descripcion</p>
+                    }
+
+                    @if (atractivo != null)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(atractivo.InformacionNatural))
+                        {
+                            <h2 class="h4 mt-4 mb-2"><svg class="jm-simbolo-icono text-danger me-2" aria-hidden="true"><use href="#t-cactus" /></svg>Información natural</h2>
+                            <p class="texto-largo">@atractivo.InformacionNatural</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(atractivo.InformacionCultural))
+                        {
+                            <h2 class="h4 mt-4 mb-2"><svg class="jm-simbolo-icono text-danger me-2" aria-hidden="true"><use href="#t-carita" /></svg>Información cultural</h2>
+                            <p class="texto-largo">@atractivo.InformacionCultural</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(atractivo.InformacionAcceso))
+                        {
+                            <h2 class="h4 mt-4 mb-2"><i class="fa fa-directions text-danger me-2"></i>Cómo llegar</h2>
+                            <p class="texto-largo">@atractivo.InformacionAcceso</p>
+                        }
+                    }
+
+                    @if (lugar.Servicios.Any())
+                    {
+                        <h2 class="h4 mt-4 mb-3"><i class="fa fa-concierge-bell text-danger me-2"></i>Servicios disponibles</h2>
+                        <div class="mb-2">
+                            @foreach (var servicio in lugar.Servicios.OrderBy(s => s.Nombre))
+                            {
+                                <span class="lugar-etiqueta" title="@servicio.Descripcion"><i class="fa fa-check text-danger me-1"></i>@servicio.Nombre</span>
+                            }
+                        </div>
+                    }
+
+                    @if (urlMapa != null)
+                    {
+                        <h2 class="h4 mt-4 mb-3"><i class="fa fa-map-marked-alt text-danger me-2"></i>Ubicación</h2>
+                        <div class="lugar-mapa">
+                            <iframe src="@urlMapa" title="Mapa de @lugar.Nombre" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                    }
+                </div>
+
+                @if (Model.Eventos.Count > 0)
+                {
+                    <h2 class="jm-h2 h3 mt-5 mb-3">Próximos eventos aquí</h2>
+                    <div class="row g-4">
+                        @for (var i = 0; i < Model.Eventos.Count; i++)
+                        {
+                            <div class="col-md-6">
+                                <partial name="_TarjetaEvento" model="(Model.Eventos[i], i)" />
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (Model.Rutas.Count > 0)
+                {
+                    <h2 class="jm-h2 h3 mt-5 mb-3">Rutas que pasan por aquí</h2>
+                    <div class="row g-4">
+                        @foreach (var ruta in Model.Rutas)
+                        {
+                            <div class="col-md-6">
+                                <partial name="_TarjetaRuta" model="ruta" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Barra lateral -->
+            <aside class="col-lg-4">
+                <div class="jm-panel jm-vidrio mb-4">
+                    <h2 class="h5 mb-2">Información</h2>
+
+                    @if (atractivo != null)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(atractivo.NivelDificultad))
+                        {
+                            <div class="lugar-dato"><i class="fa fa-signal"></i><div><span class="etiqueta">Dificultad</span>@atractivo.NivelDificultad</div></div>
+                        }
+                        @if (atractivo.DuracionVisitaMinutos > 0)
+                        {
+                            <div class="lugar-dato"><i class="fa fa-clock"></i><div><span class="etiqueta">Duración de la visita</span>@SitioPublico.Duracion(atractivo.DuracionVisitaMinutos)</div></div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(atractivo.EstadoConservacion))
+                        {
+                            <div class="lugar-dato"><i class="fa fa-seedling"></i><div><span class="etiqueta">Estado de conservación</span>@atractivo.EstadoConservacion</div></div>
+                        }
+                    }
+
+                    @if (alojamiento != null)
+                    {
+                        @if (alojamiento.PrecioMinimo.HasValue || alojamiento.PrecioMaximo.HasValue)
+                        {
+                            var precio = alojamiento.PrecioMinimo.HasValue && alojamiento.PrecioMaximo.HasValue
+                                ? $"{SitioPublico.Precio(alojamiento.PrecioMinimo)} – {SitioPublico.Precio(alojamiento.PrecioMaximo)}"
+                                : alojamiento.PrecioMinimo.HasValue ? "Desde " + SitioPublico.Precio(alojamiento.PrecioMinimo)
+                                : "Hasta " + SitioPublico.Precio(alojamiento.PrecioMaximo);
+                            <div class="lugar-dato"><i class="fa fa-tag"></i><div><span class="etiqueta">Precio por noche</span>@precio</div></div>
+                        }
+                        @if (alojamiento.CantidadHabitaciones > 0)
+                        {
+                            <div class="lugar-dato"><i class="fa fa-bed"></i><div><span class="etiqueta">Habitaciones</span>@alojamiento.CantidadHabitaciones</div></div>
+                        }
+                        @if (alojamiento.HoraEntrada.HasValue || alojamiento.HoraSalida.HasValue)
+                        {
+                            <div class="lugar-dato"><i class="fa fa-door-open"></i><div><span class="etiqueta">Entrada / salida</span>@Formato.Hora(alojamiento.HoraEntrada) / @Formato.Hora(alojamiento.HoraSalida)</div></div>
+                        }
+                    }
+
+                    @if (restaurante != null)
+                    {
+                        @if (restaurante.NivelPrecio.HasValue)
+                        {
+                            <div class="lugar-dato"><i class="fa fa-tag"></i><div><span class="etiqueta">Nivel de precio</span>@Formato.NivelPrecio(restaurante.NivelPrecio)</div></div>
+                        }
+                        @if (restaurante.HoraApertura.HasValue || restaurante.HoraCierre.HasValue)
+                        {
+                            <div class="lugar-dato"><i class="fa fa-clock"></i><div><span class="etiqueta">Horario</span>@Formato.Hora(restaurante.HoraApertura) – @Formato.Hora(restaurante.HoraCierre)</div></div>
+                        }
+                        <div class="lugar-dato"><i class="fa fa-motorcycle"></i><div><span class="etiqueta">Servicio a domicilio</span>@Formato.SiNo(restaurante.ServicioDomicilio)</div></div>
+                    }
+
+                    @if (transporte != null)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(transporte.ZonaCobertura))
+                        {
+                            <div class="lugar-dato"><i class="fa fa-map"></i><div><span class="etiqueta">Cobertura</span>@transporte.ZonaCobertura</div></div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(transporte.Horario))
+                        {
+                            <div class="lugar-dato"><i class="fa fa-clock"></i><div><span class="etiqueta">Horario</span>@transporte.Horario</div></div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(transporte.InformacionPrecio))
+                        {
+                            <div class="lugar-dato"><i class="fa fa-tag"></i><div><span class="etiqueta">Precio</span>@transporte.InformacionPrecio</div></div>
+                        }
+                        <div class="lugar-dato"><i class="fa fa-calendar-check"></i><div><span class="etiqueta">Requiere reserva</span>@Formato.SiNo(transporte.RequiereReserva)</div></div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(lugar.Direccion))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-map-marker-alt"></i><div><span class="etiqueta">Dirección</span>@lugar.Direccion</div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(lugar.Telefono))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-phone-alt"></i><div><span class="etiqueta">Teléfono</span><a href="tel:@lugar.Telefono">@lugar.Telefono</a></div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(lugar.Correo))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-envelope"></i><div><span class="etiqueta">Correo</span><a href="mailto:@lugar.Correo">@lugar.Correo</a></div></div>
+                    }
+                    @if (sitioWeb != null)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-globe"></i><div><span class="etiqueta">Sitio web</span><a href="@sitioWeb" target="_blank" rel="noopener" class="text-break">@sitioWeb</a></div></div>
+                    }
+
+                    <div class="d-grid gap-2 mt-4">
+                        @if (enlaceReserva != null)
+                        {
+                            <a href="@enlaceReserva" target="_blank" rel="noopener" class="jm-btn jm-btn--rojo"><i class="fa fa-calendar-check"></i>Reservar</a>
+                        }
+                        @if (enlaceMenu != null)
+                        {
+                            <a href="@enlaceMenu" target="_blank" rel="noopener" class="jm-btn jm-btn--rojo"><i class="fa fa-book-open"></i>Ver menú</a>
+                        }
+                        @if (urlComoLlegar != null)
+                        {
+                            <a href="@urlComoLlegar" target="_blank" rel="noopener" class="jm-btn"><i class="fa fa-directions"></i>Cómo llegar</a>
+                        }
+                        <a asp-controller="Asistente" asp-action="Index" asp-route-pregunta="Háblame de @lugar.Nombre"
+                           class="jm-btn jm-btn--contorno"><i class="fa fa-comments"></i>Preguntar al asistente</a>
+                    </div>
+                </div>
+
+                @if (horarios.Count > 0)
+                {
+                    <div class="jm-panel jm-vidrio mb-4">
+                        <h2 class="h5 mb-3">Horario</h2>
+                        <table class="table table-sm mb-0 bg-transparent">
+                            <tbody>
+                                @foreach (var h in horarios)
+                                {
+                                    <tr>
+                                        <th scope="row" class="fw-normal bg-transparent">@Formato.DiaSemana(h.DiaSemana)</th>
+                                        <td class="text-end bg-transparent">
+                                            @if (h.Cerrado)
+                                            {
+                                                <span class="text-danger">Cerrado</span>
+                                            }
+                                            else
+                                            {
+                                                @Formato.Hora(h.HoraApertura)<text> – </text>@Formato.Hora(h.HoraCierre)
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (contactos.Count > 0)
+                {
+                    <div class="jm-panel jm-vidrio mb-4">
+                        <h2 class="h5 mb-2">Contacto</h2>
+                        @foreach (var c in contactos)
+                        {
+                            var enlace = EnlaceContacto(c);
+                            <div class="lugar-dato">
+                                <i class="fa @(c.EsPrincipal ? "fa-star" : "fa-address-book")"></i>
+                                <div>
+                                    <span class="etiqueta">@c.TipoContacto</span>
+                                    @if (enlace != null)
+                                    {
+                                        <a href="@enlace" target="@(enlace.StartsWith("http") ? "_blank" : null)" rel="noopener" class="text-break">@c.ValorContacto</a>
+                                    }
+                                    else
+                                    {
+                                        @c.ValorContacto
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="jm-panel jm-vidrio text-center">
+                    <button type="button" class="jm-carita-boton" style="width:110px;height:110px" data-dato>
+                        <svg aria-hidden="true" style="width:70px;height:70px"><use href="#t-carita" /></svg>
+                        <span class="visually-hidden">Mostrar un dato curioso</span>
+                    </button>
+                    <p class="mt-3 mb-2 small">Toca la carita y aprende algo nuevo de Jimaní.</p>
+                    <a asp-action="Sorpresa" class="jm-enlace small"><i class="fa fa-dice"></i>Llévame a otro lugar al azar</a>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+@if (Model.Relacionados.Count > 0)
+{
+    <section class="jm-seccion jm-seccion--arena">
+        <div class="jm-patron" aria-hidden="true"></div>
+        <div class="container">
+            <div class="jm-titulo-seccion">
+                <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-lago" /></svg>Sigue explorando</span>
+                <h2 class="jm-h2">También te puede interesar</h2>
+            </div>
+            <div class="row g-4 justify-content-center">
+                @for (var i = 0; i < Model.Relacionados.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <partial name="_TarjetaLugar" model="(Model.Relacionados[i], i + 1)" />
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}

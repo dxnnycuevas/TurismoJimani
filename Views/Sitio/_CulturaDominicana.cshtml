@@ -1,0 +1,57 @@
+@* Elementos de la cultura dominicana *@
+@{
+    // (icono Font Awesome o símbolo SVG propio, título, texto)
+    var elementos = new[]
+    {
+        ("fa-music", "", "Merengue", "Música y baile nacional. La UNESCO lo inscribió como Patrimonio Cultural Inmaterial de la Humanidad en 2016."),
+        ("", "t-tambora", "Güira y tambora", "Junto al acordeón, son los instrumentos del merengue típico que se escucha en fiestas patronales."),
+        ("fa-guitar", "", "Bachata", "Nacida en los barrios y campos dominicanos, fue declarada patrimonio inmaterial por la UNESCO en 2019."),
+        ("", "t-larimar", "Larimar", "Piedra azul que solo se encuentra en República Dominicana, en Barahona, provincia vecina de Independencia."),
+        ("", "t-bandera", "La bandera", "Azul, blanco y rojo, con una Biblia abierta en el escudo y el lema «Dios, Patria, Libertad»."),
+        ("fa-utensils", "", "Sabor dominicano", "Sancocho, mangú y «la bandera»: arroz, habichuelas y carne, el almuerzo de cada día."),
+    };
+}
+<section class="jm-seccion jm-seccion--naranja" aria-labelledby="titulo-cultura">
+    <div class="jm-manchas" aria-hidden="true">
+        <span class="jm-mancha jm-mancha--larimar" style="width:380px;height:380px;top:-120px;right:-80px"></span>
+        <span class="jm-mancha jm-mancha--rojo" style="width:300px;height:300px;bottom:-120px;left:10%"></span>
+    </div>
+    <div class="container">
+        <div class="jm-titulo-seccion jm-revelar">
+            <span class="jm-kicker"><svg aria-hidden="true" viewBox="0 0 64 44" style="width:1.8em"><use href="#t-bandera" /></svg>Orgullo quisqueyano</span>
+            <h2 id="titulo-cultura" class="jm-h2">Cultura dominicana</h2>
+            <p class="jm-subtitulo">Lo que vas a escuchar, probar y llevarte de recuerdo en tu visita.</p>
+        </div>
+        <div class="row g-4">
+            @foreach (var (iconoFa, simbolo, titulo, texto) in elementos)
+            {
+                <div class="col-sm-6 col-lg-4 jm-revelar">
+                    <div class="jm-cultura jm-vidrio jm-liquido">
+                        <span class="jm-cultura__icono" aria-hidden="true">
+                            @if (simbolo == "t-bandera")
+                            {
+                                <svg viewBox="0 0 64 44"><use href="#t-bandera" /></svg>
+                            }
+                            else if (!string.IsNullOrEmpty(simbolo))
+                            {
+                                <svg><use href="#@simbolo" /></svg>
+                            }
+                            else
+                            {
+                                <i class="fa @iconoFa"></i>
+                            }
+                        </span>
+                        <h3>@titulo</h3>
+                        <p>@texto</p>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="text-center mt-5 jm-revelar">
+            <button type="button" class="jm-btn jm-btn--azul" data-dato>
+                <svg class="jm-simbolo-icono" aria-hidden="true"><use href="#t-carita" /></svg>
+                Otro dato curioso al azar
+            </button>
+        </div>
+    </div>
+</section>

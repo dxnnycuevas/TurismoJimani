@@ -1,0 +1,60 @@
+@* Tarjeta de una ruta turística (origen → destino, distancia, duración y dificultad) *@
+@model Ruta
+<div class="ruta-item jm-vidrio jm-liquido">
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="ruta-icono flex-shrink-0"><i class="fa fa-route"></i></span>
+        <h3 class="h5 mb-0">@Model.Nombre</h3>
+    </div>
+    @if (Model.LugarOrigen != null || Model.LugarDestino != null)
+    {
+        <p class="mb-3">
+            <i class="fa fa-map-marker-alt text-danger me-2"></i>
+            @if (Model.LugarOrigen != null)
+            {
+                <a asp-controller="Sitio" asp-action="Lugar" asp-route-id="@Model.IdLugarOrigen">@Model.LugarOrigen.Nombre</a>
+            }
+            else
+            {
+                <span>—</span>
+            }
+            <i class="fa fa-long-arrow-alt-right mx-2"></i>
+            @if (Model.LugarDestino != null)
+            {
+                <a asp-controller="Sitio" asp-action="Lugar" asp-route-id="@Model.IdLugarDestino">@Model.LugarDestino.Nombre</a>
+            }
+            else
+            {
+                <span>—</span>
+            }
+        </p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+    {
+        <p class="mb-3 flex-grow-1">@Formato.Recortar(Model.Descripcion, 180)</p>
+    }
+    <div class="d-flex flex-wrap gap-2 mt-auto">
+        @if (Model.DistanciaKilometros.HasValue)
+        {
+            <span class="ruta-dato"><i class="fa fa-road"></i>@Formato.Numero(Model.DistanciaKilometros) km</span>
+        }
+        @if (Model.DuracionMinutos > 0)
+        {
+            <span class="ruta-dato"><i class="fa fa-clock"></i>@SitioPublico.Duracion(Model.DuracionMinutos)</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.NivelDificultad))
+        {
+            <span class="ruta-dato"><i class="fa fa-signal"></i>@Model.NivelDificultad</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.TipoTransporte))
+        {
+            <span class="ruta-dato"><i class="fa fa-car"></i>@Model.TipoTransporte</span>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Instrucciones))
+    {
+        <details class="mt-3">
+            <summary>Cómo llegar</summary>
+            <p class="mt-2 mb-0 texto-largo">@Model.Instrucciones</p>
+        </details>
+    }
+</div>

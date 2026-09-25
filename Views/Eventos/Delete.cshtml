@@ -1,0 +1,32 @@
+@model Evento
+@{
+    ViewData["Title"] = "Eliminar evento";
+}
+
+<h2>Eliminar evento</h2>
+<hr />
+
+<div class="alert alert-danger">¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+        <dt class="col-sm-4">Título</dt>
+        <dd class="col-sm-8">@Model.Titulo</dd>
+        <dt class="col-sm-4">Tipo</dt>
+        <dd class="col-sm-8">@Model.Tipo</dd>
+        <dt class="col-sm-4">Inicio</dt>
+        <dd class="col-sm-8">@Formato.Fecha(Model.FechaInicio)</dd>
+        <dt class="col-sm-4">Lugar</dt>
+        <dd class="col-sm-8">@(Model.Lugar?.Nombre ?? Model.LugarTexto)</dd>
+        <dt class="col-sm-4">Publicado</dt>
+        <dd class="col-sm-8">@Formato.SiNo(Model.Publicado)</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.IdEvento" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

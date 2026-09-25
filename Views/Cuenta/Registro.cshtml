@@ -1,0 +1,79 @@
+@model AppDonnyCuevas20210074.Models.Cuenta.RegistroViewModel
+@{
+    Layout = "_LayoutSitio";
+    ViewData["Title"] = "Crear cuenta";
+    ViewData["Subtitulo"] = "Regístrate gratis en Turismo Jimaní.";
+    ViewData["Descripcion"] = "Crea tu cuenta en Turismo Jimaní.";
+}
+
+<section class="jm-seccion pt-4">
+    <div class="jm-manchas" aria-hidden="true">
+        <span class="jm-mancha jm-mancha--naranja" style="width:420px;height:420px;top:0;left:-140px;opacity:.4"></span>
+        <span class="jm-mancha jm-mancha--larimar" style="width:360px;height:360px;bottom:-80px;right:-80px;opacity:.35"></span>
+    </div>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-xl-6">
+                <div class="jm-formulario jm-vidrio">
+                    <div class="text-center mb-4">
+                        <span class="jm-marca__icono mx-auto mb-3" style="width:64px;height:64px"><svg aria-hidden="true" style="width:44px;height:44px"><use href="#t-carita" /></svg></span>
+                        <h2 class="jm-h2 h3 mb-1">Crea tu cuenta</h2>
+                        <p class="text-body-secondary mb-0">Solo te toma un minuto.</p>
+                    </div>
+
+                    <form asp-controller="Cuenta" asp-action="Registro" asp-route-returnUrl="@ViewBag.ReturnUrl" method="post" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="name" />
+                                    <label asp-for="NombreCompleto"></label>
+                                </div>
+                                <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input asp-for="Correo" type="email" class="form-control" placeholder="Correo electrónico" autocomplete="email" />
+                                    <label asp-for="Correo"></label>
+                                </div>
+                                <span asp-validation-for="Correo" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Contrasena" class="form-control" placeholder="Contraseña" autocomplete="new-password" />
+                                    <label asp-for="Contrasena"></label>
+                                </div>
+                                <span asp-validation-for="Contrasena" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ConfirmarContrasena" class="form-control" placeholder="Confirmar contraseña" autocomplete="new-password" />
+                                    <label asp-for="ConfirmarContrasena"></label>
+                                </div>
+                                <span asp-validation-for="ConfirmarContrasena" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text">
+                                    La contraseña debe tener al menos @AppDonnyCuevas20210074.Models.Cuenta.RegistroViewModel.LongitudMinimaContrasena caracteres.
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button class="jm-btn w-100" type="submit"><i class="fa fa-user-plus"></i>Crear cuenta</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <p class="text-center mt-4 mb-0">
+                        ¿Ya tienes una cuenta?
+                        <a asp-controller="Cuenta" asp-action="Ingresar" asp-route-returnUrl="@ViewBag.ReturnUrl" class="fw-semibold">Inicia sesión</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

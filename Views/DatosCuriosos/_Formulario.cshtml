@@ -1,0 +1,32 @@
+@model DatoCurioso
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-md-12">
+        <label asp-for="Texto" class="form-label">Dato</label>
+        <textarea asp-for="Texto" class="form-control" rows="3" maxlength="500"
+                  placeholder="Ej.: El Lago Enriquillo es el lago más grande de las Antillas."></textarea>
+        <div class="form-text">Una o dos frases. Se muestra al azar cuando el visitante toca una carita taína.</div>
+        <span asp-validation-for="Texto" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Categoria" class="form-label">Categoría</label>
+        <select asp-for="Categoria" class="form-select" asp-items="ViewBag.ListaCategoria"></select>
+        <span asp-validation-for="Categoria" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-8">
+        <label asp-for="Fuente" class="form-label">Fuente (opcional)</label>
+        <input asp-for="Fuente" class="form-control" placeholder="Libro, sitio web o institución de donde sale el dato" />
+        <span asp-validation-for="Fuente" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="Activo" class="form-check-input" />
+            <label asp-for="Activo" class="form-check-label">Activo (se muestra en el sitio)</label>
+        </div>
+    </div>
+</div>

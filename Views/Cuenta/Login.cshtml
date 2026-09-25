@@ -17,6 +17,13 @@
                         Panel de administración
                     </p>
 
+                    @if (TempData["Aviso"] is string aviso)
+                    {
+                        <div class="alert alert-warning">
+                            @aviso
+                        </div>
+                    }
+
                     @if (ViewBag.Error != null)
                     {
                         <div class="alert alert-danger">
@@ -68,7 +75,7 @@
             </div>
 
             <p class="text-center mt-3">
-                <a asp-controller="Asistente" asp-action="Index">¿Eres visitante? Habla con el asistente turístico</a>
+                <a asp-controller="Sitio" asp-action="Index">← Volver al sitio de Turismo Jimaní</a>
             </p>
 
         </div>

@@ -29,17 +29,27 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Lax;
 
-        options.ExpireTimeSpan = TimeSpan.FromHours(2);
+        // La sesión se cierra tras N minutos sin actividad (Sesion:MinutosInactividad, 20 por defecto).
+        // Cada petición renueva la cookie, así el plazo cuenta desde la última actividad.
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(
+            builder.Configuration.GetValue("Sesion:MinutosInactividad", 20));
         options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = contexto =>
+        {
+            contexto.ShouldRenew = true;
+            return Task.CompletedTask;
+        };
     });
 
 builder.Services.AddAuthorization();
 
-// Todas las acciones requieren usuario autenticado, salvo las marcadas con [AllowAnonymous]
+// Todas las acciones requieren personal (Administrador o Editor), salvo las marcadas con [AllowAnonymous].
+// Los visitantes registrados en el sitio público no pueden entrar al panel.
 builder.Services.AddControllersWithViews(options =>
 {
     var politica = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
+        .RequireRole(RolesSistema.Personal)
         .Build();
 
     options.Filters.Add(new AuthorizeFilter(politica));
@@ -129,19 +139,15 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// La aplicación inicia en /Cuenta/Login (si ya inició sesión, va al menú)
-app.MapGet("/", context =>
-{
-    var destino = context.User.Identity?.IsAuthenticated == true
-        ? "/Home/Index"
-        : "/Cuenta/Login";
-
-    context.Response.Redirect(destino);
-    return Task.CompletedTask;
-}).AllowAnonymous();
+// La aplicación inicia en el sitio público (SitioController). El panel de administración
+// está en /Home y su acceso en /admin (o /Cuenta/Login); no se enlaza desde el sitio público.
+app.MapControllerRoute(
+    name: "admin",
+    pattern: "admin",
+    defaults: new { controller = "Cuenta", action = "Login" });
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Sitio}/{action=Index}/{id?}");
 
 app.Run();
