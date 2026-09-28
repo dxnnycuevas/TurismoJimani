@@ -1,0 +1,96 @@
+{
+  "fecha": "2026-09-26T23:22:34",
+  "modeloBase": "dccuchile/bert-base-spanish-wwm-uncased",
+  "intenciones": [
+    "Agradecimiento",
+    "Ayuda",
+    "BuscarAlojamiento",
+    "BuscarAtractivo",
+    "BuscarRestaurante",
+    "BuscarRuta",
+    "BuscarTransporte",
+    "ConsultarAlojamiento",
+    "ConsultarAtractivo",
+    "ConsultarRestaurante",
+    "ConsultarRuta",
+    "Despedida",
+    "FueraDeAlcance",
+    "Saludo"
+  ],
+  "ejemplosPorIntencion": {
+    "Agradecimiento": 15,
+    "Ayuda": 15,
+    "BuscarAlojamiento": 44,
+    "BuscarAtractivo": 48,
+    "BuscarRestaurante": 42,
+    "BuscarRuta": 50,
+    "BuscarTransporte": 36,
+    "ConsultarAlojamiento": 48,
+    "ConsultarAtractivo": 60,
+    "ConsultarRestaurante": 40,
+    "ConsultarRuta": 31,
+    "Despedida": 15,
+    "FueraDeAlcance": 30,
+    "Saludo": 20
+  },
+  "exactitudValidacion": 0.9041,
+  "exactitudPorIntencion": {
+    "Agradecimiento": 1.0,
+    "Ayuda": 1.0,
+    "BuscarAlojamiento": 1.0,
+    "BuscarAtractivo": 1.0,
+    "BuscarRestaurante": 0.833,
+    "BuscarRuta": 1.0,
+    "BuscarTransporte": 1.0,
+    "ConsultarAlojamiento": 1.0,
+    "ConsultarAtractivo": 0.778,
+    "ConsultarRestaurante": 1.0,
+    "ConsultarRuta": 1.0,
+    "Despedida": 1.0,
+    "FueraDeAlcance": 0.25,
+    "Saludo": 0.667
+  },
+  "erroresValidacion": [
+    {
+      "texto": "¿dónde venden pica pollo?",
+      "esperada": "BuscarRestaurante",
+      "predicha": "ConsultarRestaurante"
+    },
+    {
+      "texto": "¿cómo es Las Caritas?",
+      "esperada": "ConsultarAtractivo",
+      "predicha": "FueraDeAlcance"
+    },
+    {
+      "texto": "¿qué hay en el sendero del río?",
+      "esperada": "ConsultarAtractivo",
+      "predicha": "BuscarRuta"
+    },
+    {
+      "texto": "jajaja",
+      "esperada": "FueraDeAlcance",
+      "predicha": "Saludo"
+    },
+    {
+      "texto": "¿cuántos años tienes?",
+      "esperada": "FueraDeAlcance",
+      "predicha": "Ayuda"
+    },
+    {
+      "texto": "quiero comprar un celular",
+      "esperada": "FueraDeAlcance",
+      "predicha": "BuscarTransporte"
+    },
+    {
+      "texto": "¿hay alguien ahí?",
+      "esperada": "Saludo",
+      "predicha": "BuscarAlojamiento"
+    }
+  ],
+  "parametros": {
+    "epocas": 6,
+    "lote": 16,
+    "tasa": 4e-05,
+    "semilla": 42
+  }
+}
