@@ -74,8 +74,8 @@
 
     <div class="col-md-12">
         <label asp-for="ImagenUrl" class="form-label">URL de la imagen</label>
-        <input asp-for="ImagenUrl" class="form-control" type="url" placeholder="https://" />
-        <div class="form-text">Si se deja vacía, el sitio muestra una ilustración.</div>
+        <input asp-for="ImagenUrl" class="form-control" placeholder="https://… o /uploads/…" />
+        <div class="form-text">Dirección web de la imagen o ruta de una foto ya subida al sitio (por ejemplo, la de un lugar). Si se deja vacía, el sitio muestra una ilustración.</div>
         <span asp-validation-for="ImagenUrl" class="text-danger small"></span>
     </div>
 

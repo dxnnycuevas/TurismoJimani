@@ -2,7 +2,62 @@
 @{
     // El menú del panel y el cierre por inactividad solo aplican al personal (Administrador o Editor)
     var esPersonal = RolesSistema.EsPersonal(User);
+    var esAdministrador = User.IsInRole(RolesSistema.Administrador);
     var minutosInactividad = Configuracion.GetValue("Sesion:MinutosInactividad", 20);
+
+    var controladorActual = ViewContext.RouteData.Values["controller"]?.ToString();
+    var claseActual = Context.Request.Query["clase"].ToString();
+    var nombreUsuario = User.Identity?.Name ?? "";
+    var iniciales = string.Concat(nombreUsuario.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
+
+    // Secciones del menú lateral: (título, [(texto, icono, controlador, clase de prestador)])
+    var secciones = new List<(string Titulo, List<(string Texto, string Icono, string Controlador, string? Clase)> Enlaces)>
+    {
+        ("Destinos", new()
+        {
+            ("Lugares", "fa-map-marker-alt", "Lugares", null),
+            ("Atractivos", "fa-mountain", "Atractivos", null),
+            ("Categorías", "fa-tags", "Categorias", null),
+            ("Rutas", "fa-route", "Rutas", null),
+            ("Imágenes", "fa-images", "Imagenes", null),
+            ("Horarios", "fa-clock", "Horarios", null),
+            ("Contactos", "fa-address-book", "Contactos", null)
+        }),
+        ("Prestadores de servicios", new()
+        {
+            ("Todos", "fa-concierge-bell", "Prestadores", ""),
+            ("Personas", "fa-user", "Prestadores", ClasesPrestador.Persona),
+            ("Establecimientos", "fa-store", "Prestadores", ClasesPrestador.Establecimiento),
+            ("Tipos de servicio", "fa-list", "TiposPrestador", null),
+            ("Comodidades", "fa-wifi", "Servicios", null)
+        }),
+        ("Contenido", new()
+        {
+            ("Eventos y promociones", "fa-calendar-alt", "Eventos", null),
+            ("Datos curiosos", "fa-lightbulb", "DatosCuriosos", null)
+        }),
+        ("Asistente", new()
+        {
+            ("Chat del asistente", "fa-comments", "Asistente", null),
+            ("Intenciones", "fa-bullseye", "Intenciones", null),
+            ("Ejemplos de intención", "fa-list-ul", "EjemplosIntencion", null),
+            ("Documentos", "fa-book", "DocumentosConocimiento", null),
+            ("Consultas", "fa-history", "ConsultasAsistente", null)
+        })
+    };
+    if (esAdministrador)
+    {
+        secciones.Add(("Administración", new()
+        {
+            ("Usuarios", "fa-users", "Usuarios", null),
+            ("Roles", "fa-user-shield", "Roles", null)
+        }));
+    }
+
+    // Un enlace está activo si es su controlador y, en Prestadores, también su clase (Personas / Establecimientos)
+    bool EsActivo(string controlador, string? clase) =>
+        string.Equals(controlador, controladorActual, StringComparison.OrdinalIgnoreCase)
+        && (clase == null || string.Equals(clase, claseActual, StringComparison.OrdinalIgnoreCase));
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -11,121 +66,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Turismo Jimaní</title>
     <script type="importmap"></script>
+    @if (esPersonal)
+    {
+        @* Aplica el menú compacto antes de pintar la página para que no parpadee *@
+        <script>try { if (localStorage.getItem("panel-menu-compacto") === "1") document.documentElement.classList.add("menu-compacto"); } catch { }</script>
+    }
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/panel.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AppDonnyCuevas20210074.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body class="@(esPersonal ? "panel" : "")">
     @if (esPersonal)
     {
-        <header>
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
-                <div class="container-fluid">
-                    <a class="navbar-brand" asp-controller="Home" asp-action="Index">Turismo Jimaní</a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                            aria-expanded="false" aria-label="Mostrar menú">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
-                        <ul class="navbar-nav flex-grow-1">
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Inicio</a></li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Lugares</a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" asp-controller="Lugares" asp-action="Index">Lugares</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Imagenes" asp-action="Index">Imágenes</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Horarios" asp-action="Index">Horarios</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Contactos" asp-action="Index">Contactos</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Atractivos" asp-action="Index">Atractivos</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Categorias" asp-action="Index">Categorías</a></li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Prestadores de servicios</a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index">Todos los prestadores</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index" asp-route-clase="Persona"><i class="fa fa-user fa-fw me-1"></i>Personas</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index" asp-route-clase="Establecimiento"><i class="fa fa-store fa-fw me-1"></i>Establecimientos</a></li>
-                                    <li><hr class="dropdown-divider" /></li>
-                                    <li><a class="dropdown-item" asp-controller="TiposPrestador" asp-action="Index">Tipos de servicio</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Servicios" asp-action="Index">Comodidades</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Rutas" asp-action="Index">Rutas</a></li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Contenido</a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" asp-controller="Eventos" asp-action="Index">Eventos y promociones</a></li>
-                                    <li><a class="dropdown-item" asp-controller="DatosCuriosos" asp-action="Index">Datos curiosos</a></li>
-                                </ul>
-                            </li>
-                            @if (User.IsInRole("Administrador"))
-                            {
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Usuarios</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="Usuarios" asp-action="Index">Usuarios</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Roles" asp-action="Index">Roles</a></li>
-                                    </ul>
-                                </li>
-                            }
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Asistente</a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" asp-controller="Asistente" asp-action="Index">Chat del asistente</a></li>
-                                    <li><hr class="dropdown-divider" /></li>
-                                    <li><a class="dropdown-item" asp-controller="Intenciones" asp-action="Index">Intenciones</a></li>
-                                    <li><a class="dropdown-item" asp-controller="EjemplosIntencion" asp-action="Index">Ejemplos de intención</a></li>
-                                    <li><a class="dropdown-item" asp-controller="DocumentosConocimiento" asp-action="Index">Documentos de conocimiento</a></li>
-                                    <li><a class="dropdown-item" asp-controller="ConsultasAsistente" asp-action="Index">Consultas</a></li>
-                                </ul>
+        <a class="visually-hidden-focusable panel-saltar" href="#contenido">Saltar al contenido</a>
+
+        <!-- Menú lateral: fijo en pantallas grandes, deslizable en teléfonos -->
+        <aside id="panelMenu" class="panel-menu offcanvas-lg offcanvas-start" tabindex="-1" aria-label="Menú del panel">
+            <div class="panel-menu__interior">
+                <div class="panel-menu__marca">
+                    <a asp-controller="Home" asp-action="Index" class="panel-marca" title="Inicio del panel">
+                        <span class="panel-marca__icono" aria-hidden="true"><i class="fa fa-sun"></i></span>
+                        <span class="panel-marca__texto">Turismo Jimaní<small>Panel de administración</small></span>
+                    </a>
+                    <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#panelMenu" aria-label="Cerrar menú"></button>
+                </div>
+
+                <nav class="panel-menu__nav">
+                    <a asp-controller="Home" asp-action="Index" class="panel-enlace @(EsActivo("Home", null) ? "activo" : "")"
+                       aria-current="@(EsActivo("Home", null) ? "page" : null)" title="Tablero">
+                        <i class="fa fa-chart-pie fa-fw" aria-hidden="true"></i><span>Tablero</span>
+                    </a>
+
+                    @foreach (var (titulo, enlaces) in secciones)
+                    {
+                        <div class="panel-menu__seccion" role="presentation"><span>@titulo</span></div>
+                        @foreach (var (texto, icono, controlador, clase) in enlaces)
+                        {
+                            var activo = EsActivo(controlador, clase);
+                            <a asp-controller="@controlador" asp-action="Index" asp-route-clase="@(string.IsNullOrEmpty(clase) ? null : clase)"
+                               class="panel-enlace @(activo ? "activo" : "")" aria-current="@(activo ? "page" : null)" title="@texto">
+                                <i class="fa @icono fa-fw" aria-hidden="true"></i><span>@texto</span>
+                            </a>
+                        }
+                    }
+                </nav>
+
+                <div class="panel-menu__pie">
+                    <a asp-controller="Sitio" asp-action="Index" target="_blank" class="panel-enlace" title="Ver el sitio público">
+                        <i class="fa fa-external-link-alt fa-fw" aria-hidden="true"></i><span>Ver sitio público</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <div class="panel-contenido">
+            <!-- Barra superior -->
+            <header class="panel-barra">
+                <button type="button" class="panel-hamburguesa" id="botonMenu" aria-controls="panelMenu" aria-expanded="true" aria-label="Mostrar u ocultar el menú">
+                    <span class="panel-hamburguesa__lineas" aria-hidden="true"><span></span><span></span><span></span></span>
+                </button>
+
+                <div class="panel-barra__titulo">
+                    <span class="panel-barra__migas">Panel</span>
+                    <span class="panel-barra__pagina">@ViewData["Title"]</span>
+                </div>
+
+                <div class="panel-barra__acciones">
+                    <a asp-controller="Sitio" asp-action="Index" target="_blank" class="btn btn-sm btn-light d-none d-md-inline-flex align-items-center gap-2">
+                        <i class="fa fa-globe-americas" aria-hidden="true"></i>Ver sitio
+                    </a>
+
+                    <div class="dropdown">
+                        <button class="panel-usuario" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="panel-usuario__avatar" aria-hidden="true">@iniciales</span>
+                            <span class="panel-usuario__datos d-none d-sm-flex">
+                                <span class="panel-usuario__nombre">@nombreUsuario</span>
+                                <span class="panel-usuario__rol">@(esAdministrador ? "Administrador" : "Editor")</span>
+                            </span>
+                            <i class="fa fa-chevron-down small text-muted" aria-hidden="true"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><h6 class="dropdown-header">@nombreUsuario</h6></li>
+                            <li><a class="dropdown-item" asp-controller="Sitio" asp-action="Index" target="_blank"><i class="fa fa-globe-americas fa-fw me-2" aria-hidden="true"></i>Ver sitio público</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <form asp-controller="Cuenta" asp-action="Logout" method="post" class="m-0">
+                                    <button type="submit" class="dropdown-item text-danger"><i class="fa fa-sign-out-alt fa-fw me-2" aria-hidden="true"></i>Cerrar sesión</button>
+                                </form>
                             </li>
                         </ul>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <a asp-controller="Sitio" asp-action="Index" class="btn btn-outline-primary btn-sm" target="_blank">Ver sitio público</a>
-                            <span class="text-muted small">@User.Identity?.Name</span>
-                            <form asp-controller="Cuenta" asp-action="Logout" method="post" class="m-0">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
-                            </form>
-                        </div>
                     </div>
                 </div>
-            </nav>
-        </header>
+            </header>
+
+            <main id="contenido" role="main" class="panel-main">
+                @if (TempData["Exito"] is string exito)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fa fa-check-circle me-2" aria-hidden="true"></i>@exito
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fa fa-exclamation-circle me-2" aria-hidden="true"></i>@error
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+
+            <footer class="panel-pie">&copy; 2026 · Turismo Jimaní · Provincia Independencia</footer>
+        </div>
+    }
+    else
+    {
+        <div class="container">
+            <main role="main" class="pb-3">
+                @if (TempData["Exito"] is string exito)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @exito
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @error
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="border-top footer text-muted">
+            <div class="container">
+                &copy; 2026 - Turismo Jimaní
+            </div>
+        </footer>
     }
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["Exito"] is string exito)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @exito
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-                </div>
-            }
-            @if (TempData["Error"] is string error)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    @error
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-                </div>
-            }
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Turismo Jimaní
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @if (esPersonal)
     {
+        <script src="~/js/panel.js" asp-append-version="true"></script>
         @* Cierra la pantalla cuando la sesión del servidor ya caducó por inactividad *@
         <script id="sesion-inactividad" src="~/js/sesion.js" asp-append-version="true"
                 data-minutos="@minutosInactividad"
