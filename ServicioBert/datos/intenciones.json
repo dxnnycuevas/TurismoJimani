@@ -128,7 +128,9 @@
         "busco alojamiento cerca de la frontera",
         "busco una casa de huéspedes",
         "necesito dónde pasar la noche",
-        "¿hay pensiones en Jimaní?"
+        "¿hay pensiones en Jimaní?",
+        "¿dónde puedo hospedarme?",
+        "¿dónde me quedo a dormir?"
       ]
     },
     {
@@ -180,7 +182,8 @@
         "¿alguien vende comida casera?",
         "busco un lugar para desayunar",
         "¿quién cocina comida típica?",
-        "¿dónde puedo comprar un sancocho?"
+        "¿dónde puedo comprar un sancocho?",
+        "¿dónde puedo comer?"
       ]
     },
     {
@@ -289,7 +292,13 @@
         "¿hay carros de alquiler?",
         "¿conoces un motoconcho de confianza?",
         "necesito un conductor",
-        "¿quién hace viajes a Barahona?"
+        "¿quién hace viajes a Barahona?",
+        "quiero un transportista",
+        "transportista",
+        "busco un transportista",
+        "¿hay transportistas?",
+        "necesito transporte para mañana",
+        "¿quién da servicio de transporte?"
       ]
     },
     {
@@ -498,7 +507,10 @@
         "necesito un guía para observar aves",
         "¿quién me acompaña a la isla Cabritos?",
         "muéstrame los guías disponibles",
-        "¿hay guías para grupos?"
+        "¿hay guías para grupos?",
+        "quiero un guía",
+        "guía local",
+        "¿hay guías disponibles?"
       ],
       "plantillas": [
         "¿hay guías para ir a {atractivo}?",
@@ -548,7 +560,19 @@
         "busco un plomero",
         "¿dónde compro cosas para el viaje?",
         "necesito cortarme el cabello",
-        "¿quién arregla motores?"
+        "¿quién arregla motores?",
+        "prestador de servicio",
+        "prestadores de servicios",
+        "¿qué prestadores de servicio hay?",
+        "muéstrame los prestadores de servicios",
+        "quiero ver los prestadores",
+        "servicios disponibles",
+        "¿quiénes ofrecen servicios en Jimaní?",
+        "lista de prestadores",
+        "quiero un barbero",
+        "busco barbero",
+        "necesito un servicio",
+        "¿qué negocios locales hay?"
       ]
     },
     {

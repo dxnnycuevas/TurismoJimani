@@ -268,19 +268,22 @@ public class ChatbotService
             "No encontré servicios registrados en este momento.")
     };
 
-    private IQueryable<FilaPrestador> ConsultarPrestadores() =>
-        _context.Prestadores.AsNoTracking()
-            .Where(p => p.Activo)
-            .Select(p => new FilaPrestador(
-                p.IdPrestador, p.Nombre, p.TipoPrestador!.Nombre, p.TipoPrestador.Grupo, p.Especialidad,
-                p.PrecioDesde, p.PrecioHasta, p.InformacionPrecio, p.ZonaCobertura, p.HorarioAtencion,
-                p.WhatsApp ?? p.Telefono, p.ServicioDomicilio, p.RequiereReserva, p.Destacado));
+    // Prestadores publicados. Los filtros se aplican sobre esta consulta (la entidad) y después se proyecta:
+    // EF Core no puede traducir a SQL un Where sobre las propiedades de un record ya construido.
+    private IQueryable<Prestador> PrestadoresActivos() => _context.Prestadores.AsNoTracking().Where(p => p.Activo);
+
+    private static IQueryable<FilaPrestador> Proyectar(IQueryable<Prestador> consulta) =>
+        consulta.Select(p => new FilaPrestador(
+            p.IdPrestador, p.Nombre, p.TipoPrestador!.Nombre, p.TipoPrestador.Grupo, p.TipoPrestador.Icono, p.Especialidad,
+            p.PrecioDesde, p.PrecioHasta, p.InformacionPrecio, p.ZonaCobertura, p.HorarioAtencion,
+            p.WhatsApp, p.Telefono, p.ServicioDomicilio, p.RequiereReserva, p.Destacado,
+            p.Imagenes.OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion).Select(i => i.UrlImagen).FirstOrDefault()));
 
     private async Task BuscarPrestadoresAsync(ConsultaChat c, RespuestaChat r, List<FichaResumen> fichas,
         FichaResumen? mencionada, string grupo, CancellationToken ct)
     {
         var textos = TextosGrupo(grupo);
-        var prestadores = await ConsultarPrestadores().Where(p => p.Grupo == grupo).ToListAsync(ct);
+        var prestadores = await Proyectar(PrestadoresActivos().Where(p => p.TipoPrestador!.Grupo == grupo)).ToListAsync(ct);
 
         if (prestadores.Count == 0)
         {
@@ -332,7 +335,7 @@ public class ChatbotService
     private async Task BuscarServiciosAsync(ConsultaChat c, RespuestaChat r, List<FichaResumen> fichas,
         FichaResumen? mencionada, CancellationToken ct)
     {
-        var prestadores = await ConsultarPrestadores().ToListAsync(ct);
+        var prestadores = await Proyectar(PrestadoresActivos()).ToListAsync(ct);
 
         if (prestadores.Count == 0)
         {
@@ -341,6 +344,21 @@ public class ChatbotService
         }
 
         var filtro = TextoChat.PalabrasFiltro(c.Normalizado);
+
+        if (filtro.Count == 0)
+        {
+            // "Prestadores de servicio", "¿qué servicios hay?": se muestran todos (primero los destacados)
+            var todos = prestadores
+                .OrderByDescending(p => p.Destacado).ThenBy(p => p.Nombre)
+                .Select(p => ElementoPrestador(p, true))
+                .ToList();
+
+            ResponderLista(c, r, fichas, mencionada, Dominio.Servicio, todos,
+                "Estos son los prestadores de servicios registrados en Jimaní:", "prestadores",
+                "También puedes pedirme uno en específico, por ejemplo «chofer», «guía» o «barbero».");
+            return;
+        }
+
         var coincidencias = FiltrarPorPalabras(c, prestadores);
 
         if (coincidencias.Count == 0)
@@ -351,13 +369,9 @@ public class ChatbotService
                 .OrderBy(g => g.Key)
                 .Select(g => $"• {g.Key} ({g.Count()})");
 
-            var inicio = filtro.Count > 0
-                ? "No encontré prestadores registrados para lo que buscas. "
-                : "";
-
-            Responder(r, filtro.Count > 0 ? TiposRespuesta.SinResultados : TiposRespuesta.Aclaracion,
-                inicio + "Estos son los servicios registrados en Jimaní:\n" + string.Join("\n", tipos) +
-                "\n\n¿Cuál te interesa? Por ejemplo, escribe «" + prestadores.OrderBy(p => p.Tipo).First().Tipo.ToLower() + "».");
+            Responder(r, TiposRespuesta.SinResultados,
+                "No encontré prestadores registrados para lo que buscas. Estos son los servicios registrados en Jimaní:\n" + string.Join("\n", tipos) +
+                "\n\n¿Cuál te interesa? Por ejemplo, escribe «" + prestadores.OrderBy(p => p.Tipo).First().Tipo.Split('/')[0].Trim().ToLower() + "».");
             return;
         }
 
@@ -401,7 +415,17 @@ public class ChatbotService
             string.IsNullOrWhiteSpace(p.ZonaCobertura) ? null : $"Zona: {p.ZonaCobertura}",
             p.ServicioDomicilio ? "Servicio a domicilio" : null,
             conContacto && !string.IsNullOrWhiteSpace(p.Contacto) ? $"Contacto: {p.Contacto}" : null),
-        p.PrecioDesde ?? p.PrecioHasta);
+        p.PrecioDesde ?? p.PrecioHasta)
+    {
+        Subtitulo = p.Tipo,
+        Imagen = p.Imagen,
+        Icono = IconoPrestador(p.IconoTipo, p.Grupo),
+        WhatsApp = p.WhatsApp,
+        Telefono = p.Telefono
+    };
+
+    private static string IconoPrestador(string? iconoTipo, string? grupo) =>
+        !string.IsNullOrWhiteSpace(iconoTipo) ? iconoTipo : GruposPrestador.Icono(grupo);
 
     // ------------------------------------------------------------------ búsquedas de lugares y rutas
 
@@ -417,7 +441,8 @@ public class ChatbotService
                 a.TipoAtractivo,
                 a.NivelDificultad,
                 a.Destacado,
-                Categorias = a.Lugar.Categorias.Where(cat => cat.Activo).Select(cat => cat.Nombre).ToList()
+                Categorias = a.Lugar.Categorias.Where(cat => cat.Activo).Select(cat => cat.Nombre).ToList(),
+                Imagen = a.Lugar.Imagenes.OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion).Select(i => i.UrlImagen).FirstOrDefault()
             })
             .ToListAsync(ct);
 
@@ -454,7 +479,12 @@ public class ChatbotService
             .OrderByDescending(a => a.Destacado).ThenBy(a => a.Nombre)
             .Select(a => new ElementoLista(RefFicha.Lugar(a.IdLugar), a.Nombre,
                 Unir(", ", a.TipoAtractivo, string.IsNullOrWhiteSpace(a.NivelDificultad) ? null : $"dificultad {a.NivelDificultad.ToLower()}"),
-                null))
+                null)
+            {
+                Subtitulo = a.TipoAtractivo ?? "Atractivo",
+                Imagen = a.Imagen,
+                Icono = "fa-mountain"
+            })
             .ToList();
 
         ResponderLista(c, r, fichas, mencionada, Dominio.Atractivo, elementos, intro,
@@ -613,13 +643,13 @@ public class ChatbotService
             ? c.Contexto.UltimosLugares.Where(x => x.EsPrestador).Select(x => x.Id).ToList()
             : new List<int>();
 
-        var consulta = ConsultarPrestadores().Where(p => p.PrecioDesde != null || p.PrecioHasta != null);
+        var consulta = PrestadoresActivos().Where(p => p.PrecioDesde != null || p.PrecioHasta != null);
         if (ids.Count > 0)
-            consulta = consulta.Where(p => ids.Contains(p.Id));
+            consulta = consulta.Where(p => ids.Contains(p.IdPrestador));
         else if (grupo != null)
-            consulta = consulta.Where(p => p.Grupo == grupo);
+            consulta = consulta.Where(p => p.TipoPrestador!.Grupo == grupo);
 
-        var candidatos = await consulta.ToListAsync(ct);
+        var candidatos = await Proyectar(consulta).ToListAsync(ct);
         var plural = NombrePlural(dominio);
 
         if (candidatos.Count == 0)
@@ -639,7 +669,7 @@ public class ChatbotService
             $"con precio {precio}.\n\n¿Quieres más información?");
 
         c.Contexto.RecordarLugar(dominio, RefFicha.Prestador(elegido.Id));
-        r.Resultados.Add(new ResultadoChat(elegido.Id, elegido.Nombre, "Prestador", precio));
+        r.Resultados.Add(Tarjeta(ElementoPrestador(elegido, true)));
     }
 
     private async Task DescribirLugarAsync(ConsultaChat c, RespuestaChat r, int idLugar, CancellationToken ct)
@@ -711,8 +741,19 @@ public class ChatbotService
 
         texto.AppendLine().Append("¿Quieres saber cómo llegar, buscar un guía o ver qué otros lugares hay cerca?");
 
+        var foto = await _context.Imagenes.AsNoTracking()
+            .Where(i => i.IdLugar == lugar.IdLugar)
+            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
+            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
+
         c.Contexto.RecordarLugar(Dominio.Atractivo, RefFicha.Lugar(lugar.IdLugar));
-        r.Resultados.Add(new ResultadoChat(lugar.IdLugar, lugar.Nombre, lugar.Atractivo != null ? "Atractivo" : "Lugar", lugar.DescripcionCorta));
+        r.Resultados.Add(Tarjeta(new ElementoLista(RefFicha.Lugar(lugar.IdLugar), lugar.Nombre, lugar.DescripcionCorta, null)
+        {
+            Subtitulo = lugar.Atractivo?.TipoAtractivo ?? (lugar.Atractivo != null ? "Atractivo" : "Lugar de interés"),
+            Imagen = foto,
+            Icono = lugar.Atractivo != null ? "fa-mountain" : "fa-map-marker-alt",
+            Telefono = lugar.Telefono
+        }));
         Responder(r, TiposRespuesta.Datos, texto.ToString().Trim(), limpiarResultados: false);
     }
 
@@ -781,8 +822,20 @@ public class ChatbotService
             _ => "¿Quieres ver otras opciones parecidas?"
         });
 
+        var foto = await _context.Imagenes.AsNoTracking()
+            .Where(i => i.IdPrestador == p.IdPrestador)
+            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
+            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
+
         c.Contexto.RecordarLugar(dominio, RefFicha.Prestador(p.IdPrestador));
-        r.Resultados.Add(new ResultadoChat(p.IdPrestador, p.Nombre, "Prestador", p.DescripcionCorta ?? p.TipoPrestador?.Nombre));
+        r.Resultados.Add(Tarjeta(new ElementoLista(RefFicha.Prestador(p.IdPrestador), p.Nombre, p.DescripcionCorta, null)
+        {
+            Subtitulo = p.TipoPrestador?.Nombre,
+            Imagen = foto,
+            Icono = IconoPrestador(p.TipoPrestador?.Icono, grupo),
+            WhatsApp = p.WhatsApp,
+            Telefono = p.Telefono
+        }));
         Responder(r, TiposRespuesta.Datos, texto.ToString().Trim(), limpiarResultados: false);
     }
 
@@ -984,9 +1037,31 @@ public class ChatbotService
         texto.Append('\n').Append(pregunta);
 
         c.Contexto.RecordarLista(dominio, mostrados.Select(e => e.Ref));
-        r.Resultados.AddRange(mostrados.Select(e => new ResultadoChat(e.Ref.Id, e.Nombre, e.Ref.EsPrestador ? "Prestador" : dominio.ToString(), e.Detalle)));
+        r.Resultados.AddRange(mostrados.Select((e, i) => Tarjeta(e, i + 1)));
         Responder(r, TiposRespuesta.Datos, texto.ToString(), limpiarResultados: false);
+
+        // Junto a las fichas basta con la introducción y la pregunta (el detalle está en cada ficha)
+        var corto = new StringBuilder(intro);
+        if (elementos.Count > mostrados.Count)
+            corto.Append($" (te muestro {mostrados.Count} de {elementos.Count})");
+        if (nota != null)
+            corto.Append("\n\n").Append(nota);
+        corto.Append("\n\n").Append(pregunta);
+        r.TextoCorto = corto.ToString();
     }
+
+    // Ficha que el chat muestra con foto, tipo y botones de perfil y contacto
+    private static ResultadoChat Tarjeta(ElementoLista e, int? numero = null) =>
+        new(e.Ref.Id, e.Nombre, e.Ref.EsPrestador ? "Prestador" : "Lugar", e.Detalle)
+        {
+            Numero = numero,
+            Subtitulo = e.Subtitulo,
+            Imagen = SitioPublico.UrlSegura(e.Imagen),
+            Icono = e.Icono,
+            Url = e.Ref.EsPrestador ? $"/Sitio/Prestador/{e.Ref.Id}" : $"/Sitio/Lugar/{e.Ref.Id}",
+            WhatsApp = SitioPublico.EnlaceWhatsApp(e.WhatsApp, $"Hola {e.Nombre}, le escribo desde el asistente de Turismo Jimaní."),
+            Telefono = SitioPublico.EnlaceTelefono(e.Telefono)
+        };
 
     // ------------------------------------------------------------------ utilidades
 
@@ -1169,13 +1244,23 @@ public class ChatbotService
     // Lugar turístico o prestador de servicios que el asistente puede nombrar y describir
     private sealed record FichaResumen(RefFicha Ref, string Nombre, Dominio Dominio, decimal? Latitud, decimal? Longitud);
 
-    private sealed record FilaPrestador(int Id, string Nombre, string Tipo, string Grupo, string? Especialidad,
+    private sealed record FilaPrestador(int Id, string Nombre, string Tipo, string Grupo, string? IconoTipo, string? Especialidad,
         decimal? PrecioDesde, decimal? PrecioHasta, string? InformacionPrecio, string? ZonaCobertura, string? HorarioAtencion,
-        string? Contacto, bool ServicioDomicilio, bool RequiereReserva, bool Destacado);
+        string? WhatsApp, string? Telefono, bool ServicioDomicilio, bool RequiereReserva, bool Destacado, string? Imagen)
+    {
+        public string? Contacto => WhatsApp ?? Telefono;
+    }
 
     private sealed record RutaResumen(int IdRuta, string Nombre, string? Descripcion, int? IdLugarOrigen, int? IdLugarDestino,
         string? Origen, string? Destino, decimal? DistanciaKilometros, int? DuracionMinutos, string? NivelDificultad,
         string? TipoTransporte, string? Instrucciones);
 
-    private sealed record ElementoLista(RefFicha Ref, string Nombre, string? Detalle, decimal? Precio, double? DistanciaKm = null);
+    private sealed record ElementoLista(RefFicha Ref, string Nombre, string? Detalle, decimal? Precio, double? DistanciaKm = null)
+    {
+        public string? Subtitulo { get; init; }
+        public string? Imagen { get; init; }
+        public string? Icono { get; init; }
+        public string? WhatsApp { get; init; }
+        public string? Telefono { get; init; }
+    }
 }

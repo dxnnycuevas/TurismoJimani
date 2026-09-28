@@ -33,7 +33,8 @@ public static partial class TextoChat
         "jimani", "hotel", "hoteles", "restaurante", "restaurantes", "comer", "transporte", "tienen", "registrados",
         "cerca", "cercanos", "cercanas", "muestrame", "dame", "lista", "opciones", "quisiera", "necesito",
         "servicio", "servicios", "alguien", "persona", "personas", "contratar", "negocio", "negocios",
-        "disponible", "disponibles", "ofrece", "ofrecen", "pueblo", "aqui", "zona", "local", "locales"
+        "disponible", "disponibles", "ofrece", "ofrecen", "pueblo", "aqui", "zona", "local", "locales",
+        "prestador", "prestadores", "transportista", "transportistas", "llevar", "lleve", "lleva", "viaje", "viajes"
     };
 
     private static readonly Dictionary<string, int> Ordinales = new()
@@ -83,13 +84,44 @@ public static partial class TextoChat
     public static List<string> PalabrasFiltro(string normalizado) =>
         PalabrasClave(normalizado).Where(t => !PalabrasDeConsulta.Contains(t)).ToList();
 
-    // Compara dos palabras por su raíz: "naturales" ~ "natural", "rios" ~ "rio"
+    // Compara dos palabras por su raíz: "naturales" ~ "natural", "rios" ~ "rio".
+    // En palabras largas también acepta un error de escritura: "berbero" ~ "barbero" ~ "barberia".
     public static bool CoincideRaiz(string a, string b)
     {
         if (a.Length <= 4 || b.Length <= 4)
             return a == b || a + "s" == b || b + "s" == a || a + "es" == b || b + "es" == a;
 
-        return string.CompareOrdinal(a, 0, b, 0, 5) == 0;
+        if (string.CompareOrdinal(a, 0, b, 0, 5) == 0 || DistanciaEdicion(a, b, 1) <= 1)
+            return true;
+
+        // Raíz de 6 letras con una letra distinta (solo palabras de 6 o más para evitar "playa" ~ "plaza")
+        return a.Length >= 6 && b.Length >= 6 && DistanciaEdicion(a[..6], b[..6], 1) <= 1;
+    }
+
+    // Distancia de Levenshtein (letras cambiadas, sobrantes o faltantes); se detiene al pasar el máximo
+    private static int DistanciaEdicion(string a, string b, int maximo)
+    {
+        if (Math.Abs(a.Length - b.Length) > maximo) return maximo + 1;
+
+        var anterior = new int[b.Length + 1];
+        var actual = new int[b.Length + 1];
+        for (var j = 0; j <= b.Length; j++) anterior[j] = j;
+
+        for (var i = 1; i <= a.Length; i++)
+        {
+            actual[0] = i;
+            var minimoFila = actual[0];
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var costo = a[i - 1] == b[j - 1] ? 0 : 1;
+                actual[j] = Math.Min(Math.Min(actual[j - 1] + 1, anterior[j] + 1), anterior[j - 1] + costo);
+                minimoFila = Math.Min(minimoFila, actual[j]);
+            }
+            if (minimoFila > maximo) return maximo + 1;
+            (anterior, actual) = (actual, anterior);
+        }
+
+        return anterior[b.Length];
     }
 
     // Busca en el mensaje el nombre de un registro de la base de datos (lugar o ruta).
