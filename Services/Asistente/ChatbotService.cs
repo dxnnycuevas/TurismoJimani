@@ -140,11 +140,20 @@ public class ChatbotService
         var mencionada = TextoChat.BuscarPorNombre(c.Normalizado, fichas, f => f.Nombre);
         var intencion = c.Intencion;
 
+        // Tipos de servicio registrados que nombra el mensaje ("farmacia", "colmado", "taller"...)
+        var gruposMencionados = mencionada is null ? await GruposDeTiposMencionadosAsync(c, ct) : null;
+
         if (TextoChat.EsSoloReferencia(c.Normalizado) && c.Contexto.Dominio is { } dominioAnterior
             && (c.Contexto.UltimosLugares.Count > 0 || c.Contexto.UltimasRutas.Count > 0))
         {
             // Seguimiento corto como "el 2" sobre la última lista mostrada
             intencion = IntencionConsultar(dominioAnterior);
+        }
+        else if (gruposMencionados is not null && !gruposMencionados.Contains(GrupoDeIntencion(intencion) ?? "")
+                 && intencion is not (NombresIntencion.BuscarRuta or NombresIntencion.ConsultarRuta))
+        {
+            // Nombra un tipo de servicio pero BERT lo clasificó en otra cosa: se buscan esos prestadores
+            intencion = NombresIntencion.BuscarServicio;
         }
         else if (c.Confianza < _umbralConfianza)
         {
@@ -388,6 +397,34 @@ public class ChatbotService
             "Estos son los prestadores registrados que ofrecen lo que buscas:", "prestadores",
             "¿Quieres más información sobre alguno? Escribe su nombre o su número.");
     }
+
+    // Grupos de los tipos de servicio (con prestadores publicados) que nombra el mensaje; null si no nombra ninguno
+    private async Task<HashSet<string>?> GruposDeTiposMencionadosAsync(ConsultaChat c, CancellationToken ct)
+    {
+        var filtro = TextoChat.PalabrasFiltro(c.Normalizado);
+        if (filtro.Count == 0) return null;
+
+        var tipos = await _context.TiposPrestador.AsNoTracking()
+            .Where(t => t.Activo && t.Prestadores.Any(p => p.Activo))
+            .Select(t => new { t.Nombre, t.Grupo })
+            .ToListAsync(ct);
+
+        var grupos = tipos
+            .Where(t => TextoChat.PalabrasClave(TextoChat.Normalizar(t.Nombre)).Any(p => filtro.Any(f => TextoChat.CoincideRaiz(f, p))))
+            .Select(t => t.Grupo)
+            .ToHashSet();
+
+        return grupos.Count > 0 ? grupos : null;
+    }
+
+    private static string? GrupoDeIntencion(string? intencion) => intencion switch
+    {
+        NombresIntencion.BuscarAlojamiento or NombresIntencion.ConsultarAlojamiento => GruposPrestador.Alojamiento,
+        NombresIntencion.BuscarRestaurante or NombresIntencion.ConsultarRestaurante => GruposPrestador.Gastronomia,
+        NombresIntencion.BuscarTransporte => GruposPrestador.Transporte,
+        NombresIntencion.BuscarGuia => GruposPrestador.Guia,
+        _ => null
+    };
 
     // Prestadores cuyo tipo, especialidad o nombre coincide con alguna palabra distintiva del mensaje
     private static List<FilaPrestador> FiltrarPorPalabras(ConsultaChat c, List<FilaPrestador> prestadores)
