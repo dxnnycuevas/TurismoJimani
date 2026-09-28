@@ -8,3 +8,6 @@ appsettings.Development.json
 ServicioBert/.venv/
 ServicioBert/modelo/
 __pycache__/
+
+# Fotos subidas desde el panel
+wwwroot/uploads/

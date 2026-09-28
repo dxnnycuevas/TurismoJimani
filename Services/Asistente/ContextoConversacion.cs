@@ -6,7 +6,17 @@ public enum Dominio
     Alojamiento,
     Restaurante,
     Transporte,
+    Guia,
+    Servicio,
     Ruta
+}
+
+// Referencia a una ficha que el asistente puede describir: un lugar turístico o un prestador de servicios.
+// Los Id de Lugares y Prestadores se repiten entre tablas, por eso se guarda también de cuál es.
+public readonly record struct RefFicha(bool EsPrestador, int Id)
+{
+    public static RefFicha Lugar(int id) => new(false, id);
+    public static RefFicha Prestador(int id) => new(true, id);
 }
 
 // Lo que el asistente recuerda de la conversación de una sesión (IdSesion).
@@ -18,32 +28,32 @@ public class ContextoConversacion
     // Tipo de resultados que se mostraron por última vez
     public Dominio? Dominio { get; set; }
 
-    // Lugares de la última lista mostrada, en el mismo orden (para "el primero", "el 2", etc.)
-    public List<int> UltimosLugares { get; set; } = new();
+    // Fichas de la última lista mostrada, en el mismo orden (para "el primero", "el 2", etc.)
+    public List<RefFicha> UltimosLugares { get; set; } = new();
 
     // Rutas de la última lista mostrada
     public List<int> UltimasRutas { get; set; } = new();
 
-    // Último lugar del que se dio información detallada
-    public int? LugarEnFoco { get; set; }
+    // Última ficha de la que se dio información detallada
+    public RefFicha? LugarEnFoco { get; set; }
 
     // true si lo último que se mostró fue un detalle (no una lista)
     public bool EnfoqueReciente { get; set; }
 
-    public void RecordarLista(Dominio dominio, IEnumerable<int> idsLugares)
+    public void RecordarLista(Dominio dominio, IEnumerable<RefFicha> fichas)
     {
         Dominio = dominio;
-        UltimosLugares = idsLugares.ToList();
+        UltimosLugares = fichas.ToList();
         EnfoqueReciente = false;
         if (UltimosLugares.Count == 1)
             LugarEnFoco = UltimosLugares[0];
     }
 
-    public void RecordarLugar(Dominio? dominio, int idLugar)
+    public void RecordarLugar(Dominio? dominio, RefFicha ficha)
     {
         if (dominio.HasValue)
             Dominio = dominio;
-        LugarEnFoco = idLugar;
+        LugarEnFoco = ficha;
         EnfoqueReciente = true;
     }
 

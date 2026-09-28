@@ -1,0 +1,33 @@
+@model Prestador
+@{
+    ViewData["Title"] = "Eliminar prestador";
+}
+
+<h2>Eliminar prestador de servicios</h2>
+<hr />
+
+<div class="alert alert-danger">
+    ¿Está seguro de que desea eliminar este prestador? También se eliminarán sus @Model.Imagenes.Count foto(s). Esta acción no se puede deshacer.
+    Si solo quiere ocultarlo del sitio, <a asp-action="Edit" asp-route-id="@Model.IdPrestador" class="alert-link">edítelo</a> y desmarque «Publicado en el sitio».
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Nombre</dt>
+            <dd class="col-sm-8">@Model.Nombre</dd>
+            <dt class="col-sm-4">Tipo de servicio</dt>
+            <dd class="col-sm-8">@Model.TipoPrestador?.Nombre</dd>
+            <dt class="col-sm-4">Teléfono</dt>
+            <dd class="col-sm-8">@Model.Telefono</dd>
+            <dt class="col-sm-4">Fotos</dt>
+            <dd class="col-sm-8">@Model.Imagenes.Count</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.IdPrestador" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

@@ -1,4 +1,5 @@
 using AppDonnyCuevas20210074.Data;
+using AppDonnyCuevas20210074.Helpers;
 using AppDonnyCuevas20210074.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,12 @@ namespace AppDonnyCuevas20210074.Controllers;
 public class LugaresController : Controller
 {
     private readonly TurismoJimaniContext _context;
+    private readonly AlmacenImagenes _almacen;
 
-    public LugaresController(TurismoJimaniContext context)
+    public LugaresController(TurismoJimaniContext context, AlmacenImagenes almacen)
     {
         _context = context;
+        _almacen = almacen;
     }
 
     // GET: Lugares
@@ -42,6 +45,7 @@ public class LugaresController : Controller
         var entidad = await _context.Lugares
             .Include(x => x.Categorias)
             .Include(x => x.Servicios)
+            .Include(x => x.Imagenes)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.IdLugar == id);
 
@@ -151,7 +155,7 @@ public class LugaresController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var entidad = await _context.Lugares.FindAsync(id);
+        var entidad = await _context.Lugares.Include(l => l.Imagenes).FirstOrDefaultAsync(l => l.IdLugar == id);
         if (entidad == null) return RedirectToAction(nameof(Index));
 
         if (await _context.Rutas.AnyAsync(r => r.IdLugarOrigen == id || r.IdLugarDestino == id))
@@ -160,11 +164,13 @@ public class LugaresController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        var archivos = entidad.Imagenes.Select(i => i.UrlImagen).ToList();
         _context.Lugares.Remove(entidad);
 
         try
         {
             await _context.SaveChangesAsync();
+            foreach (var archivo in archivos) _almacen.Eliminar(archivo);
             TempData["Exito"] = "Registro eliminado correctamente.";
         }
         catch (DbUpdateException)

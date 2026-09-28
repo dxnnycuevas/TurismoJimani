@@ -1,0 +1,69 @@
+@model Prestador
+@{
+    ViewData["Title"] = Model.Nombre;
+    var tipo = Model.TipoPrestador;
+    var grupo = tipo?.Grupo;
+
+    // (etiqueta, valor) de los datos que tienen contenido
+    var datos = new List<(string Etiqueta, string? Valor)>
+    {
+        ("Tipo de servicio", tipo == null ? null : $"{tipo.Nombre} ({(tipo.Clase == ClasesPrestador.Establecimiento ? "establecimiento" : "persona")})"),
+        (GruposPrestador.EtiquetaEspecialidad(grupo), Model.Especialidad),
+        ("Descripción corta", Model.DescripcionCorta),
+        ("Teléfono", Model.Telefono),
+        ("WhatsApp", Model.WhatsApp),
+        ("Correo", Model.Correo),
+        ("Red social", Model.RedSocial),
+        ("Sitio web", Model.SitioWeb),
+        ("Zona de servicio", Model.ZonaCobertura),
+        ("Horario de atención", Model.HorarioAtencion),
+        ("Precio", SitioPublico.RangoPrecio(Model.PrecioDesde, Model.PrecioHasta)),
+        ("Nota sobre el precio", Model.InformacionPrecio),
+        (GruposPrestador.EtiquetaCapacidad(grupo), Model.Capacidad?.ToString()),
+        ("Requiere reserva", Formato.SiNo(Model.RequiereReserva)),
+        ("Servicio a domicilio", Formato.SiNo(Model.ServicioDomicilio)),
+        ("Enlace de reserva / menú", Model.EnlaceExterno),
+        ("Dirección", string.Join(", ", new[] { Model.Direccion, Model.Municipio, Model.Provincia }.Where(p => !string.IsNullOrWhiteSpace(p)))),
+        ("Coordenadas", Model.Latitud.HasValue ? $"{Formato.Numero(Model.Latitud)}, {Formato.Numero(Model.Longitud)}" : null),
+        ("Comodidades", Model.Servicios.Any() ? string.Join(", ", Model.Servicios.OrderBy(s => s.Nombre).Select(s => s.Nombre)) : null),
+        ("Publicado en el sitio", Formato.SiNo(Model.Activo)),
+        ("Destacado", Formato.SiNo(Model.Destacado)),
+        ("Fecha de creación", Formato.Fecha(Model.FechaCreacion)),
+        ("Última actualización", Formato.Fecha(Model.FechaActualizacion)),
+    };
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="mb-0"><i class="fa @SitioPublico.IconoTipo(tipo) text-secondary me-2"></i>@Model.Nombre</h2>
+    <div class="d-flex gap-2">
+        @if (Model.Activo)
+        {
+            <a asp-controller="Sitio" asp-action="Prestador" asp-route-id="@Model.IdPrestador" target="_blank" class="btn btn-outline-secondary"><i class="fa fa-external-link-alt me-1"></i>Ver en el sitio</a>
+        }
+        <a asp-action="Edit" asp-route-id="@Model.IdPrestador" class="btn btn-primary">Editar</a>
+    </div>
+</div>
+<hr />
+
+<partial name="_Album" model="(Model.Imagenes.AsEnumerable(), (int?)null, (int?)Model.IdPrestador)" />
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header"><h5 class="mb-0">Datos del prestador</h5></div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            @foreach (var (etiqueta, valor) in datos.Where(d => !string.IsNullOrWhiteSpace(d.Valor)))
+            {
+                <dt class="col-sm-4">@etiqueta</dt>
+                <dd class="col-sm-8 text-break">@valor</dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+            {
+                <dt class="col-sm-4">Descripción</dt>
+                <dd class="col-sm-8" style="white-space:pre-line">@Model.Descripcion</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+<a asp-action="Edit" asp-route-id="@Model.IdPrestador" class="btn btn-primary">Editar</a>
+<a asp-action="Index" class="btn btn-secondary">Volver al listado</a>

@@ -11,8 +11,8 @@
         <dl class="row mb-0">
         <dt class="col-sm-4">URL de la imagen</dt>
         <dd class="col-sm-8"><img src="@Model.UrlImagen" alt="@Model.TextoAlternativo" class="img-fluid rounded mb-2" style="max-height:240px" /><br /><a href="@Model.UrlImagen" target="_blank" rel="noopener" class="small">@Model.UrlImagen</a></dd>
-        <dt class="col-sm-4">Lugar</dt>
-        <dd class="col-sm-8">@Model.Lugar?.Nombre</dd>
+        <dt class="col-sm-4">Pertenece a</dt>
+        <dd class="col-sm-8">@(Model.Lugar?.Nombre ?? Model.Prestador?.Nombre)<span class="text-muted small ms-1">(@(Model.IdLugar != null ? "Lugar" : "Prestador de servicios"))</span></dd>
         <dt class="col-sm-4">Texto alternativo</dt>
         <dd class="col-sm-8">@Model.TextoAlternativo</dd>
         <dt class="col-sm-4">Descripción</dt>

@@ -1,0 +1,67 @@
+@* Álbum de fotos de un lugar o de un prestador de servicios (panel de administración) *@
+@model (IEnumerable<Imagen> Imagenes, int? IdLugar, int? IdPrestador)
+@{
+    var fotos = Model.Imagenes.OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion).ToList();
+    var volver = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="mb-0"><i class="fa fa-images me-2"></i>Álbum de fotos <span class="badge text-bg-secondary">@fotos.Count</span></h5>
+        <a asp-controller="Imagenes" asp-action="Create" asp-route-idLugar="@Model.IdLugar" asp-route-idPrestador="@Model.IdPrestador"
+           class="btn btn-sm btn-outline-secondary">Agregar con créditos o por URL</a>
+    </div>
+    <div class="card-body">
+        <form asp-controller="Imagenes" asp-action="Subir" method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="idLugar" value="@Model.IdLugar" />
+            <input type="hidden" name="idPrestador" value="@Model.IdPrestador" />
+            <input type="hidden" name="volver" value="@volver" />
+            <div class="col-md-8">
+                <label for="fotosAlbum" class="form-label small fw-semibold">Subir fotos desde la PC (puede elegir varias a la vez)</label>
+                <input type="file" id="fotosAlbum" name="fotos" class="form-control" multiple required accept="@AlmacenImagenes.ExtensionesAceptadas" />
+            </div>
+            <div class="col-md-4 d-grid">
+                <button type="submit" class="btn btn-primary"><i class="fa fa-upload me-1"></i>Subir al álbum</button>
+            </div>
+        </form>
+
+        @if (fotos.Count == 0)
+        {
+            <div class="alert alert-info mb-0">Todavía no hay fotos. La primera que suba será la foto de portada.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var foto in fotos)
+                {
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="card h-100 @(foto.EsPrincipal ? "border-primary border-2" : "")">
+                            <a href="@foto.UrlImagen" target="_blank" rel="noopener">
+                                <img src="@foto.UrlImagen" alt="@foto.TextoAlternativo" class="card-img-top" style="height:140px;object-fit:cover" loading="lazy" />
+                            </a>
+                            <div class="card-body p-2 d-flex flex-wrap gap-1 align-items-center">
+                                @if (foto.EsPrincipal)
+                                {
+                                    <span class="badge text-bg-primary me-auto"><i class="fa fa-star me-1"></i>Portada</span>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Imagenes" asp-action="Principal" asp-route-id="@foto.IdImagen" method="post" class="me-auto">
+                                        <input type="hidden" name="volver" value="@volver" />
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Usar como foto de portada"><i class="fa fa-star"></i></button>
+                                    </form>
+                                }
+                                <a asp-controller="Imagenes" asp-action="Edit" asp-route-id="@foto.IdImagen" class="btn btn-sm btn-outline-secondary" title="Editar descripción y créditos"><i class="fa fa-pen"></i></a>
+                                <form asp-controller="Imagenes" asp-action="Quitar" asp-route-id="@foto.IdImagen" method="post"
+                                      onsubmit="return confirm('¿Eliminar esta foto del álbum?');">
+                                    <input type="hidden" name="volver" value="@volver" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar foto"><i class="fa fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

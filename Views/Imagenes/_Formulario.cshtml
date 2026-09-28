@@ -3,13 +3,17 @@
 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
 <div class="row g-3">
-    <div class="col-md-12">
-        <label asp-for="UrlImagen" class="form-label">URL de la imagen</label>
-        <input asp-for="UrlImagen" class="form-control" type="url" placeholder="https://" />
-        <span asp-validation-for="UrlImagen" class="text-danger small"></span>
+    <div class="col-12">
+        <label class="form-label d-block">¿A quién pertenece la foto?</label>
+        <div class="btn-group" role="group" aria-label="Dueño de la foto">
+            <input type="radio" class="btn-check" name="duenoFoto" id="dueno-lugar" value="lugar" autocomplete="off" checked="@(Model.IdPrestador == null)" />
+            <label class="btn btn-outline-primary" for="dueno-lugar"><i class="fa fa-map-marker-alt me-1"></i>Lugar turístico</label>
+            <input type="radio" class="btn-check" name="duenoFoto" id="dueno-prestador" value="prestador" autocomplete="off" checked="@(Model.IdPrestador != null)" />
+            <label class="btn btn-outline-primary" for="dueno-prestador"><i class="fa fa-user-tie me-1"></i>Prestador de servicios</label>
+        </div>
     </div>
 
-    <div class="col-md-6">
+    <div class="col-md-6" data-dueno="lugar">
         <label asp-for="IdLugar" class="form-label">Lugar</label>
         <select asp-for="IdLugar" class="form-select" asp-items="ViewBag.ListaIdLugar">
             <option value="">-- Seleccione --</option>
@@ -20,6 +24,38 @@
         }
         <span asp-validation-for="IdLugar" class="text-danger small"></span>
     </div>
+
+    <div class="col-md-6" data-dueno="prestador">
+        <label asp-for="IdPrestador" class="form-label">Prestador de servicios</label>
+        <select asp-for="IdPrestador" class="form-select" asp-items="ViewBag.ListaIdPrestador">
+            <option value="">-- Seleccione --</option>
+        </select>
+        @if (ViewBag.ListaIdPrestador is SelectList listaIdPrestador && !listaIdPrestador.Any())
+        {
+            <div class="form-text">No hay prestadores registrados. <a asp-controller="Prestadores" asp-action="Create">Registrar un prestador</a></div>
+        }
+        <span asp-validation-for="IdPrestador" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label for="archivo" class="form-label">Subir foto desde la PC</label>
+        <input type="file" id="archivo" name="archivo" class="form-control" accept="@AlmacenImagenes.ExtensionesAceptadas" />
+        <div class="form-text">JPG, PNG, WEBP o GIF de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB.@(string.IsNullOrEmpty(Model.UrlImagen) ? "" : " Si sube una nueva, reemplaza la actual.")</div>
+        <span class="text-danger small">@Html.ValidationMessage("archivo")</span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="UrlImagen" class="form-label">…o dirección web de la imagen</label>
+        <input asp-for="UrlImagen" class="form-control" placeholder="https://" data-val="false" />
+        <span asp-validation-for="UrlImagen" class="text-danger small"></span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.UrlImagen) && SitioPublico.UrlSegura(Model.UrlImagen) is string actual)
+    {
+        <div class="col-12">
+            <img src="@actual" alt="Imagen actual" class="img-thumbnail" style="max-height:140px" />
+        </div>
+    }
 
     <div class="col-md-6">
         <label asp-for="TextoAlternativo" class="form-label">Texto alternativo</label>
@@ -75,3 +111,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Muestra solo la lista del dueño elegido y vacía la otra para que se envíe una sola
+    (function () {
+        const bloques = document.querySelectorAll("[data-dueno]");
+        function aplicar() {
+            const elegido = document.querySelector("input[name=duenoFoto]:checked")?.value ?? "lugar";
+            bloques.forEach(b => {
+                const visible = b.dataset.dueno === elegido;
+                b.hidden = !visible;
+                const lista = b.querySelector("select");
+                if (!visible && lista) lista.value = "";
+            });
+        }
+        document.querySelectorAll("input[name=duenoFoto]").forEach(r => r.addEventListener("change", aplicar));
+        aplicar();
+    })();
+</script>

@@ -1,0 +1,114 @@
+@model IEnumerable<Prestador>
+@{
+    ViewData["Title"] = "Prestadores de servicios";
+    var clase = (string?)ViewBag.Clase;
+    var tipos = (List<TipoPrestador>)ViewBag.Tipos;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h2 class="mb-0">Prestadores de servicios</h2>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Create" asp-route-clase="@ClasesPrestador.Persona" class="btn btn-primary"><i class="fa fa-user-plus me-1"></i>Nueva persona</a>
+        <a asp-action="Create" asp-route-clase="@ClasesPrestador.Establecimiento" class="btn btn-primary"><i class="fa fa-store me-1"></i>Nuevo establecimiento</a>
+        <a asp-controller="TiposPrestador" asp-action="Index" class="btn btn-outline-secondary">Tipos de servicio</a>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a asp-action="Index" class="nav-link @(clase == null ? "active" : "")">Todos</a></li>
+    <li class="nav-item"><a asp-action="Index" asp-route-clase="@ClasesPrestador.Persona" class="nav-link @(clase == ClasesPrestador.Persona ? "active" : "")"><i class="fa fa-user me-1"></i>Personas</a></li>
+    <li class="nav-item"><a asp-action="Index" asp-route-clase="@ClasesPrestador.Establecimiento" class="nav-link @(clase == ClasesPrestador.Establecimiento ? "active" : "")"><i class="fa fa-store me-1"></i>Establecimientos</a></li>
+</ul>
+
+<form asp-action="Index" method="get" class="row g-2 mb-3">
+    <input type="hidden" name="clase" value="@clase" />
+    <div class="col-sm-6 col-md-5">
+        <input type="search" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar por nombre, tipo o especialidad" />
+    </div>
+    <div class="col-sm-4 col-md-3">
+        <select name="tipo" class="form-select">
+            <option value="">Todos los tipos</option>
+            @foreach (var t in tipos)
+            {
+                <option value="@t.IdTipoPrestador" selected="@(t.IdTipoPrestador == (int?)ViewBag.Tipo)">@t.Nombre</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+        <a asp-action="Index" asp-route-clase="@clase" class="btn btn-link">Limpiar</a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay prestadores registrados con esos filtros.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th style="width:70px"></th>
+                    <th>Nombre</th>
+                    <th>Tipo de servicio</th>
+                    <th>Contacto</th>
+                    <th>Fotos</th>
+                    <th>Publicado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var portada = item.Imagenes.OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion).FirstOrDefault();
+                    <tr>
+                        <td>
+                            @if (portada != null)
+                            {
+                                <img src="@portada.UrlImagen" alt="" class="rounded" style="width:56px;height:56px;object-fit:cover" />
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center justify-content-center rounded bg-light text-secondary" style="width:56px;height:56px">
+                                    <i class="fa @SitioPublico.IconoTipo(item.TipoPrestador) fa-lg"></i>
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.IdPrestador" class="fw-semibold text-decoration-none">@item.Nombre</a>
+                            @if (item.Destacado)
+                            {
+                                <i class="fa fa-star text-warning ms-1" title="Destacado"></i>
+                            }
+                            <div class="text-muted small">@Formato.Recortar(item.DescripcionCorta, 70)</div>
+                        </td>
+                        <td>
+                            @item.TipoPrestador?.Nombre
+                            <div class="text-muted small">@(item.TipoPrestador?.Clase == ClasesPrestador.Establecimiento ? "Establecimiento" : "Persona")</div>
+                        </td>
+                        <td class="small">
+                            @if (!string.IsNullOrWhiteSpace(item.Telefono))
+                            {
+                                <div><i class="fa fa-phone-alt me-1"></i>@item.Telefono</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.WhatsApp))
+                            {
+                                <div><i class="fab fa-whatsapp me-1"></i>@item.WhatsApp</div>
+                            }
+                        </td>
+                        <td>@item.Imagenes.Count</td>
+                        <td>@Formato.SiNo(item.Activo)</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Details" asp-route-id="@item.IdPrestador" class="btn btn-sm btn-outline-secondary">Ver</a>
+                            <a asp-action="Edit" asp-route-id="@item.IdPrestador" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a asp-action="Delete" asp-route-id="@item.IdPrestador" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Total: @Model.Count() registro(s)</p>
+}

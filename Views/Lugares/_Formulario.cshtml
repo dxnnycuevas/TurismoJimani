@@ -93,7 +93,7 @@
     </div>
 
     <div class="col-md-6">
-        <label class="form-label d-block">Servicios</label>
+        <label class="form-label d-block">Comodidades</label>
         @foreach (var servicio in (List<Servicio>)ViewBag.Servicios)
         {
             <div class="form-check">
@@ -104,7 +104,7 @@
         }
         @if (!((List<Servicio>)ViewBag.Servicios).Any())
         {
-            <div class="form-text">No hay servicios activos. <a asp-controller="Servicios" asp-action="Create">Registrar un servicio</a></div>
+            <div class="form-text">No hay comodidades activas. <a asp-controller="Servicios" asp-action="Create">Registrar una comodidad</a></div>
         }
     </div>
 </div>

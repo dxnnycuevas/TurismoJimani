@@ -1,0 +1,42 @@
+@model TipoPrestador
+@{
+    ViewData["Title"] = "Eliminar tipo de servicio";
+    var total = (int)ViewBag.TotalPrestadores;
+}
+
+<h2>Eliminar tipo de servicio</h2>
+<hr />
+
+@if (total > 0)
+{
+    <div class="alert alert-warning">
+        Este tipo tiene @total prestador(es) registrado(s), por eso no se puede eliminar.
+        Puede <a asp-action="Edit" asp-route-id="@Model.IdTipoPrestador" class="alert-link">desactivarlo</a> para que no se use en registros nuevos.
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">¿Está seguro de que desea eliminar este tipo de servicio? Esta acción no se puede deshacer.</div>
+}
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Nombre</dt>
+            <dd class="col-sm-8"><i class="fa @SitioPublico.IconoTipo(Model) me-1"></i>@Model.Nombre</dd>
+            <dt class="col-sm-4">Clase</dt>
+            <dd class="col-sm-8">@Model.Clase</dd>
+            <dt class="col-sm-4">Grupo</dt>
+            <dd class="col-sm-8">@GruposPrestador.Nombre(Model.Grupo)</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.IdTipoPrestador" />
+    @if (total == 0)
+    {
+        <button type="submit" class="btn btn-danger">Eliminar</button>
+    }
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

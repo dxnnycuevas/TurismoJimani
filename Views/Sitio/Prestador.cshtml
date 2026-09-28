@@ -1,0 +1,244 @@
+@model AppDonnyCuevas20210074.Models.Sitio.PrestadorViewModel
+@{
+    var p = Model.Prestador;
+    var tipo = p.TipoPrestador;
+    var grupo = tipo?.Grupo;
+    ViewData["Title"] = p.Nombre;
+    ViewData["Subtitulo"] = p.DescripcionCorta ?? tipo?.Nombre;
+    ViewData["Descripcion"] = p.DescripcionCorta ?? $"{p.Nombre}, {tipo?.Nombre} en Jimaní.";
+    ViewData["MigaTexto"] = GruposPrestador.Nombre(grupo);
+    ViewData["MigaUrl"] = Url.Action("Servicios", "Sitio", new { grupo });
+
+    var fotos = SitioPublico.ImagenesOrdenadas(p).ToList();
+    var ubicacion = string.Join(", ", new[] { p.Direccion, p.Municipio, p.Provincia }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var urlMapa = SitioPublico.UrlMapa(p.Latitud, p.Longitud, 15);
+    var urlComoLlegar = SitioPublico.UrlComoLlegar(p.Latitud, p.Longitud);
+    var precio = SitioPublico.RangoPrecio(p.PrecioDesde, p.PrecioHasta);
+
+    var telefono = SitioPublico.EnlaceTelefono(p.Telefono);
+    var whatsapp = SitioPublico.EnlaceWhatsApp(p.WhatsApp, $"Hola {p.Nombre}, vi su perfil en Turismo Jimaní y quisiera información.");
+    var sitioWeb = SitioPublico.UrlSegura(p.SitioWeb);
+    var redSocial = SitioPublico.UrlSegura(p.RedSocial);
+    var enlaceExterno = SitioPublico.UrlSegura(p.EnlaceExterno);
+    var textoEnlace = grupo switch
+    {
+        GruposPrestador.Gastronomia => "Ver menú",
+        GruposPrestador.Comercio => "Ver catálogo",
+        _ => "Reservar"
+    };
+}
+
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent CreditoFoto(Imagen imagen)
+    {
+        var credito = SitioPublico.Credito(imagen);
+        if (string.IsNullOrEmpty(credito)) return Microsoft.AspNetCore.Html.HtmlString.Empty;
+
+        var contenido = new Microsoft.AspNetCore.Html.HtmlContentBuilder();
+        contenido.AppendHtml("<span class=\"jm-credito\">");
+        contenido.Append(credito);
+        contenido.AppendHtml("</span>");
+        return contenido;
+    }
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Contenido principal -->
+            <div class="col-lg-8">
+                <div class="jm-articulo jm-vidrio">
+                    @if (fotos.Count > 1)
+                    {
+                        <div id="albumPrestador" class="carousel slide lugar-galeria mb-3" data-bs-ride="carousel">
+                            <div class="carousel-inner">
+                                @for (var i = 0; i < fotos.Count; i++)
+                                {
+                                    <div class="carousel-item @(i == 0 ? "active" : "")">
+                                        <img src="@fotos[i].UrlImagen" alt="@(fotos[i].TextoAlternativo ?? p.Nombre)" />
+                                        @CreditoFoto(fotos[i])
+                                        @if (!string.IsNullOrWhiteSpace(fotos[i].Descripcion))
+                                        {
+                                            <div class="carousel-caption d-none d-md-block"><p class="mb-0">@fotos[i].Descripcion</p></div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#albumPrestador" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Anterior</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#albumPrestador" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Siguiente</span>
+                            </button>
+                        </div>
+
+                        <!-- Miniaturas del álbum -->
+                        <div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Fotos del álbum">
+                            @for (var i = 0; i < fotos.Count; i++)
+                            {
+                                <button type="button" class="p-0 border-0 bg-transparent" data-bs-target="#albumPrestador" data-bs-slide-to="@i" aria-label="Ver foto @(i + 1)">
+                                    <img src="@fotos[i].UrlImagen" alt="" loading="lazy" class="rounded-3 shadow-sm" style="width:84px;height:64px;object-fit:cover" />
+                                </button>
+                            }
+                        </div>
+                    }
+                    else if (fotos.Count == 1)
+                    {
+                        <div class="jm-foto mb-4">
+                            <img class="lugar-portada" src="@fotos[0].UrlImagen" alt="@(fotos[0].TextoAlternativo ?? p.Nombre)" />
+                            @CreditoFoto(fotos[0])
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="lugar-portada-ilustracion mb-4">
+                            <partial name="_Ilustracion" model="(SitioPublico.Ilustracion(p), p.IdPrestador)" />
+                        </div>
+                    }
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="jm-etiqueta"><i class="fa @SitioPublico.IconoTipo(tipo)"></i>@tipo?.Nombre</span>
+                        <span class="lugar-etiqueta mb-0"><i class="fa @(tipo?.Clase == ClasesPrestador.Establecimiento ? "fa-store" : "fa-user") me-1"></i>@SitioPublico.EsPersonaTexto(p)</span>
+                        @if (p.Destacado)
+                        {
+                            <span class="jm-etiqueta jm-etiqueta--solida"><i class="fa fa-star"></i>Destacado</span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(ubicacion))
+                    {
+                        <p class="mb-4 text-body-secondary"><i class="fa fa-map-marker-alt text-danger me-2"></i>@ubicacion</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(p.Descripcion))
+                    {
+                        <p class="jm-articulo__contenido mb-4 texto-largo">@p.Descripcion</p>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(p.DescripcionCorta))
+                    {
+                        <p class="jm-articulo__contenido mb-4">@p.DescripcionCorta</p>
+                    }
+
+                    @if (p.Servicios.Any())
+                    {
+                        <h2 class="h4 mt-4 mb-3"><i class="fa fa-concierge-bell text-danger me-2"></i>Comodidades</h2>
+                        <div class="mb-2">
+                            @foreach (var servicio in p.Servicios.OrderBy(s => s.Nombre))
+                            {
+                                <span class="lugar-etiqueta" title="@servicio.Descripcion"><i class="fa fa-check text-danger me-1"></i>@servicio.Nombre</span>
+                            }
+                        </div>
+                    }
+
+                    @if (urlMapa != null)
+                    {
+                        <h2 class="h4 mt-4 mb-3"><i class="fa fa-map-marked-alt text-danger me-2"></i>Ubicación</h2>
+                        <div class="lugar-mapa">
+                            <iframe src="@urlMapa" title="Mapa de @p.Nombre" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Barra lateral: datos y contacto -->
+            <aside class="col-lg-4">
+                <div class="jm-panel jm-vidrio mb-4">
+                    <h2 class="h5 mb-2">Información</h2>
+
+                    @if (!string.IsNullOrWhiteSpace(p.Especialidad))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-info-circle"></i><div><span class="etiqueta">@GruposPrestador.EtiquetaEspecialidad(grupo)</span>@p.Especialidad</div></div>
+                    }
+                    @if (!string.IsNullOrEmpty(precio))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-tag"></i><div><span class="etiqueta">Precio</span>@precio</div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.InformacionPrecio))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-receipt"></i><div><span class="etiqueta">Sobre el precio</span>@p.InformacionPrecio</div></div>
+                    }
+                    @if (p.Capacidad > 0)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-users"></i><div><span class="etiqueta">@GruposPrestador.EtiquetaCapacidad(grupo)</span>@p.Capacidad</div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.ZonaCobertura))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-map"></i><div><span class="etiqueta">Zona de servicio</span>@p.ZonaCobertura</div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.HorarioAtencion))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-clock"></i><div><span class="etiqueta">Horario</span>@p.HorarioAtencion</div></div>
+                    }
+                    @if (p.RequiereReserva)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-calendar-check"></i><div><span class="etiqueta">Reserva</span>Se recomienda reservar o pedir cita</div></div>
+                    }
+                    @if (p.ServicioDomicilio)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-motorcycle"></i><div><span class="etiqueta">A domicilio</span>Ofrece servicio a domicilio</div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.Telefono))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-phone-alt"></i><div><span class="etiqueta">Teléfono</span><a href="@telefono">@p.Telefono</a></div></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.Correo))
+                    {
+                        <div class="lugar-dato"><i class="fa fa-envelope"></i><div><span class="etiqueta">Correo</span><a href="mailto:@p.Correo" class="text-break">@p.Correo</a></div></div>
+                    }
+                    @if (redSocial != null)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-share-alt"></i><div><span class="etiqueta">Redes sociales</span><a href="@redSocial" target="_blank" rel="noopener" class="text-break">@redSocial</a></div></div>
+                    }
+                    @if (sitioWeb != null)
+                    {
+                        <div class="lugar-dato"><i class="fa fa-globe"></i><div><span class="etiqueta">Sitio web</span><a href="@sitioWeb" target="_blank" rel="noopener" class="text-break">@sitioWeb</a></div></div>
+                    }
+
+                    <div class="d-grid gap-2 mt-4">
+                        @if (whatsapp != null)
+                        {
+                            <a href="@whatsapp" target="_blank" rel="noopener" class="jm-btn jm-btn--rojo"><i class="fab fa-whatsapp"></i>Escribir por WhatsApp</a>
+                        }
+                        @if (telefono != null)
+                        {
+                            <a href="@telefono" class="jm-btn"><i class="fa fa-phone-alt"></i>Llamar</a>
+                        }
+                        @if (enlaceExterno != null)
+                        {
+                            <a href="@enlaceExterno" target="_blank" rel="noopener" class="jm-btn"><i class="fa fa-external-link-alt"></i>@textoEnlace</a>
+                        }
+                        @if (urlComoLlegar != null)
+                        {
+                            <a href="@urlComoLlegar" target="_blank" rel="noopener" class="jm-btn jm-btn--contorno"><i class="fa fa-directions"></i>Cómo llegar</a>
+                        }
+                        <a asp-controller="Asistente" asp-action="Index" asp-route-pregunta="Háblame de @p.Nombre"
+                           class="jm-btn jm-btn--contorno"><i class="fa fa-comments"></i>Preguntar al asistente</a>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+@if (Model.Relacionados.Count > 0)
+{
+    <section class="jm-seccion jm-seccion--arena">
+        <div class="jm-patron" aria-hidden="true"></div>
+        <div class="container">
+            <div class="jm-titulo-seccion">
+                <span class="jm-kicker"><svg aria-hidden="true"><use href="#t-sol" /></svg>Más opciones</span>
+                <h2 class="jm-h2">Otros servicios parecidos</h2>
+            </div>
+            <div class="row g-4 justify-content-center">
+                @for (var i = 0; i < Model.Relacionados.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <partial name="_TarjetaPrestador" model="(Model.Relacionados[i], i + 1)" />
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}

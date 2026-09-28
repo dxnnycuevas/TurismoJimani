@@ -39,11 +39,13 @@
         <dd class="col-sm-8">@Formato.Fecha(Model.FechaActualizacion)</dd>
         <dt class="col-sm-4">Categorías</dt>
         <dd class="col-sm-8">@(Model.Categorias.Any() ? string.Join(", ", Model.Categorias.OrderBy(c => c.Nombre).Select(c => c.Nombre)) : "—")</dd>
-        <dt class="col-sm-4">Servicios</dt>
+        <dt class="col-sm-4">Comodidades</dt>
         <dd class="col-sm-8">@(Model.Servicios.Any() ? string.Join(", ", Model.Servicios.OrderBy(s => s.Nombre).Select(s => s.Nombre)) : "—")</dd>
         </dl>
     </div>
 </div>
+
+<partial name="_Album" model="(Model.Imagenes.AsEnumerable(), (int?)Model.IdLugar, (int?)null)" />
 
 <a asp-action="Edit" asp-route-id="@Model.IdLugar" class="btn btn-primary">Editar</a>
 <a asp-action="Index" class="btn btn-secondary">Volver al listado</a>

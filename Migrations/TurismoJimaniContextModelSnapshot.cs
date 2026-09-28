@@ -22,54 +22,6 @@ namespace AppDonnyCuevas20210074.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Alojamiento", b =>
-                {
-                    b.Property<int>("IdAlojamiento")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAlojamiento"));
-
-                    b.Property<int?>("CantidadHabitaciones")
-                        .HasColumnType("int");
-
-                    b.Property<string>("EnlaceReserva")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("FechaActualizacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<TimeSpan?>("HoraEntrada")
-                        .HasColumnType("time");
-
-                    b.Property<TimeSpan?>("HoraSalida")
-                        .HasColumnType("time");
-
-                    b.Property<int>("IdLugar")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("PrecioMaximo")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<decimal?>("PrecioMinimo")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("TipoAlojamiento")
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
-
-                    b.HasKey("IdAlojamiento");
-
-                    b.HasIndex("IdLugar")
-                        .IsUnique();
-
-                    b.ToTable("Alojamientos");
-                });
-
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Atractivo", b =>
                 {
                     b.Property<int>("IdAtractivo")
@@ -458,7 +410,10 @@ namespace AppDonnyCuevas20210074.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("IdLugar")
+                    b.Property<int?>("IdLugar")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IdPrestador")
                         .HasColumnType("int");
 
                     b.Property<string>("Licencia")
@@ -481,7 +436,12 @@ namespace AppDonnyCuevas20210074.Migrations
 
                     b.HasIndex("IdLugar");
 
-                    b.ToTable("Imagenes");
+                    b.HasIndex("IdPrestador");
+
+                    b.ToTable("Imagenes", t =>
+                        {
+                            t.HasCheckConstraint("CK_Imagenes_Propietario", "(IdLugar IS NOT NULL AND IdPrestador IS NULL) OR (IdLugar IS NULL AND IdPrestador IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Intencion", b =>
@@ -576,17 +536,45 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("Lugares");
                 });
 
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Restaurante", b =>
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Prestador", b =>
                 {
-                    b.Property<int>("IdRestaurante")
+                    b.Property<int>("IdPrestador")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdRestaurante"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPrestador"));
 
-                    b.Property<string>("EnlaceMenu")
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("Capacidad")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Correo")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Descripcion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescripcionCorta")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("Destacado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("EnlaceExterno")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Especialidad")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTime?>("FechaActualizacion")
                         .HasColumnType("datetime2");
@@ -594,31 +582,75 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<TimeSpan?>("HoraApertura")
-                        .HasColumnType("time");
+                    b.Property<string>("HorarioAtencion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
-                    b.Property<TimeSpan?>("HoraCierre")
-                        .HasColumnType("time");
-
-                    b.Property<int>("IdLugar")
+                    b.Property<int>("IdTipoPrestador")
                         .HasColumnType("int");
 
-                    b.Property<byte?>("NivelPrecio")
-                        .HasColumnType("tinyint");
+                    b.Property<string>("InformacionPrecio")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal?>("Latitud")
+                        .HasColumnType("decimal(10,8)");
+
+                    b.Property<decimal?>("Longitud")
+                        .HasColumnType("decimal(11,8)");
+
+                    b.Property<string>("Municipio")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal?>("PrecioDesde")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("PrecioHasta")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Provincia")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RedSocial")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<bool>("RequiereReserva")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("ServicioDomicilio")
                         .HasColumnType("bit");
 
-                    b.Property<string>("TipoComida")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<string>("SitioWeb")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
-                    b.HasKey("IdRestaurante");
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.HasIndex("IdLugar")
-                        .IsUnique();
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.ToTable("Restaurantes");
+                    b.Property<string>("ZonaCobertura")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("IdPrestador");
+
+                    b.HasIndex("IdTipoPrestador");
+
+                    b.HasIndex("Nombre");
+
+                    b.ToTable("Prestadores");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Rol", b =>
@@ -727,49 +759,46 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("Servicios");
                 });
 
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Transporte", b =>
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.TipoPrestador", b =>
                 {
-                    b.Property<int>("IdTransporte")
+                    b.Property<int>("IdTipoPrestador")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdTransporte"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdTipoPrestador"));
 
-                    b.Property<DateTime?>("FechaActualizacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Horario")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("IdLugar")
-                        .HasColumnType("int");
-
-                    b.Property<string>("InformacionPrecio")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("RequiereReserva")
+                    b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<string>("TipoTransporte")
+                    b.Property<string>("Clase")
                         .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("ZonaCobertura")
+                    b.Property<string>("Descripcion")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.HasKey("IdTransporte");
+                    b.Property<string>("Grupo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
-                    b.HasIndex("IdLugar")
+                    b.Property<string>("Icono")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("IdTipoPrestador");
+
+                    b.HasIndex("Nombre")
                         .IsUnique();
 
-                    b.ToTable("Transportes");
+                    b.ToTable("TiposPrestador");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Usuario", b =>
@@ -847,15 +876,19 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("LugarServicio", (string)null);
                 });
 
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Alojamiento", b =>
+            modelBuilder.Entity("PrestadorServicio", b =>
                 {
-                    b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
-                        .WithOne("Alojamiento")
-                        .HasForeignKey("AppDonnyCuevas20210074.Models.Alojamiento", "IdLugar")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<int>("PrestadoresIdPrestador")
+                        .HasColumnType("int");
 
-                    b.Navigation("Lugar");
+                    b.Property<int>("ServiciosIdServicio")
+                        .HasColumnType("int");
+
+                    b.HasKey("PrestadoresIdPrestador", "ServiciosIdServicio");
+
+                    b.HasIndex("ServiciosIdServicio");
+
+                    b.ToTable("PrestadorServicio", (string)null);
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Atractivo", b =>
@@ -917,21 +950,27 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
                         .WithMany("Imagenes")
                         .HasForeignKey("IdLugar")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AppDonnyCuevas20210074.Models.Prestador", "Prestador")
+                        .WithMany("Imagenes")
+                        .HasForeignKey("IdPrestador")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Lugar");
+
+                    b.Navigation("Prestador");
                 });
 
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Restaurante", b =>
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Prestador", b =>
                 {
-                    b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
-                        .WithOne("Restaurante")
-                        .HasForeignKey("AppDonnyCuevas20210074.Models.Restaurante", "IdLugar")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("AppDonnyCuevas20210074.Models.TipoPrestador", "TipoPrestador")
+                        .WithMany("Prestadores")
+                        .HasForeignKey("IdTipoPrestador")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Lugar");
+                    b.Navigation("TipoPrestador");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Ruta", b =>
@@ -949,17 +988,6 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Navigation("LugarDestino");
 
                     b.Navigation("LugarOrigen");
-                });
-
-            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Transporte", b =>
-                {
-                    b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
-                        .WithOne("Transporte")
-                        .HasForeignKey("AppDonnyCuevas20210074.Models.Transporte", "IdLugar")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Lugar");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Usuario", b =>
@@ -1003,6 +1031,21 @@ namespace AppDonnyCuevas20210074.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PrestadorServicio", b =>
+                {
+                    b.HasOne("AppDonnyCuevas20210074.Models.Prestador", null)
+                        .WithMany()
+                        .HasForeignKey("PrestadoresIdPrestador")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AppDonnyCuevas20210074.Models.Servicio", null)
+                        .WithMany()
+                        .HasForeignKey("ServiciosIdServicio")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Intencion", b =>
                 {
                     b.Navigation("Ejemplos");
@@ -1010,8 +1053,6 @@ namespace AppDonnyCuevas20210074.Migrations
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Lugar", b =>
                 {
-                    b.Navigation("Alojamiento");
-
                     b.Navigation("Atractivo");
 
                     b.Navigation("Contactos");
@@ -1019,15 +1060,21 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Navigation("Horarios");
 
                     b.Navigation("Imagenes");
+                });
 
-                    b.Navigation("Restaurante");
-
-                    b.Navigation("Transporte");
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Prestador", b =>
+                {
+                    b.Navigation("Imagenes");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Rol", b =>
                 {
                     b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.TipoPrestador", b =>
+                {
+                    b.Navigation("Prestadores");
                 });
 #pragma warning restore 612, 618
         }
