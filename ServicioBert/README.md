@@ -63,6 +63,14 @@ La cadena de conexión se toma de `../appsettings.json` (la misma que usa ASP.NE
 Las consultas reales quedan en **Asistente ▸ Consultas** (tabla `ConsultasAsistente`) y sirven para
 encontrar frases mal clasificadas.
 
+Para entrenar sin detener el servicio, guarde el modelo nuevo en otra carpeta y cámbielo después:
+
+```bat
+set BERT_MODELO=%CD%\modelo_nuevo
+entrenar.bat
+:: detener iniciar.bat, renombrar modelo -> modelo_anterior y modelo_nuevo -> modelo, e iniciar de nuevo
+```
+
 Opciones de `entrenar.bat`:
 - `--solo-archivo`: entrena con `datos/intenciones.json` sin conectarse a SQL Server.
 - `--resembrar`: agrega a la base de datos los ejemplos base que falten.

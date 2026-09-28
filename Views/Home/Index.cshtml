@@ -1,23 +1,308 @@
+@model AppDonnyCuevas20210074.Models.Panel.TableroViewModel
 @{
-    ViewData["Title"] = "Inicio";
-    var modulos = (List<(string Titulo, string Controlador, int Total, bool SoloAdmin)>)ViewBag.Modulos;
+    ViewData["Title"] = "Tablero";
+    var cultura = System.Globalization.CultureInfo.GetCultureInfo("es-DO");
+    string N(int valor) => valor.ToString("N0", cultura);
+
+    var variacion = Model.VariacionConsultas;
+    var fecha = DateTime.Today.ToString("dddd d 'de' MMMM 'de' yyyy", cultura);
+    fecha = char.ToUpper(fecha[0], cultura) + fecha[1..];
+
+    // Datos para los gráficos (los lee wwwroot/js/panel-graficos.js)
+    var datosGraficos = new
+    {
+        consultasPorDia = Model.ConsultasPorDia,
+        prestadoresPorGrupo = Model.PrestadoresPorGrupo,
+        intenciones = Model.IntencionesFrecuentes
+    };
+    var hayConsultas = Model.ConsultasPorDia.Any(p => p.Valor > 0);
+    var hayPrestadores = Model.PrestadoresPorGrupo.Any(p => p.Valor > 0);
+    var hayIntenciones = Model.IntencionesFrecuentes.Count > 0;
 }
 
-<div class="py-3">
-    <h1 class="h3">Bienvenido, @User.Identity?.Name</h1>
-    <p class="text-muted">Panel de administración de Turismo Jimaní.</p>
+<div class="tablero-saludo d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1>Hola, @User.Identity?.Name</h1>
+        <p>@fecha · Resumen de Turismo Jimaní</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="Prestadores" asp-action="Create" asp-route-clase="Persona" class="btn btn-primary"><i class="fa fa-user-plus me-1" aria-hidden="true"></i>Nuevo prestador</a>
+        <a asp-controller="Lugares" asp-action="Create" class="btn btn-outline-primary"><i class="fa fa-map-marker-alt me-1" aria-hidden="true"></i>Nuevo lugar</a>
+    </div>
 </div>
 
-<div class="row g-3">
-    @foreach (var modulo in modulos)
-    {
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="@modulo.Controlador" asp-action="Index" class="card h-100 text-decoration-none shadow-sm">
-                <div class="card-body">
-                    <div class="text-muted small">@modulo.Titulo</div>
-                    <div class="fs-3 fw-semibold text-dark">@modulo.Total</div>
-                </div>
-            </a>
+<!-- Indicadores -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono" aria-hidden="true"><i class="fa fa-map-marked-alt"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Lugares turísticos</div>
+                <div class="indicador__valor">@N(Model.Lugares)</div>
+                <div class="indicador__detalle">@N(Model.Atractivos) atractivos · @N(Model.FotosLugares) fotos</div>
+            </div>
         </div>
-    }
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--naranja" aria-hidden="true"><i class="fa fa-concierge-bell"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Prestadores de servicios</div>
+                <div class="indicador__valor">@N(Model.Prestadores)</div>
+                <div class="indicador__detalle">@N(Model.Personas) personas · @N(Model.Establecimientos) establecimientos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--verde" aria-hidden="true"><i class="fa fa-calendar-alt"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Eventos próximos</div>
+                <div class="indicador__valor">@N(Model.EventosProximos)</div>
+                <div class="indicador__detalle">Publicados en el sitio</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--violeta" aria-hidden="true"><i class="fa fa-comments"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Consultas al asistente</div>
+                <div class="indicador__valor">@N(Model.Consultas30Dias)</div>
+                <div class="indicador__detalle">
+                    @if (variacion is double v)
+                    {
+                        <span class="delta @(v >= 0 ? "delta--sube" : "delta--baja")">
+                            <i class="fa @(v >= 0 ? "fa-arrow-up" : "fa-arrow-down")" aria-hidden="true"></i>
+                            @(v >= 0 ? "+" : "−")@Math.Abs(v).ToString("0", cultura) %
+                        </span>
+                        <span>vs. 30 días anteriores</span>
+                    }
+                    else
+                    {
+                        <span>Últimos 30 días</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Consultas por día + calidad de las respuestas -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-8">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo" id="titulo-consultas">Consultas al asistente</h2>
+                    <p class="grafico-tarjeta__subtitulo">Mensajes recibidos por día · últimos 14 días</p>
+                </div>
+                <button type="button" class="grafico-tarjeta__alternar" data-alternar="consultas" aria-expanded="false">Ver tabla</button>
+            </div>
+            <div class="card-body pt-0">
+                <div class="grafico-lienzo" data-vista="grafico" data-grafico="consultas">
+                    @if (hayConsultas)
+                    {
+                        <canvas id="grafico-consultas" role="img"
+                                aria-label="Consultas por día; el detalle está en la vista de tabla"></canvas>
+                    }
+                    else
+                    {
+                        <div class="grafico-vacio"><i class="fa fa-comment-slash" aria-hidden="true"></i>Todavía no hay consultas en estos 14 días.</div>
+                    }
+                </div>
+                <div class="grafico-tabla" data-vista="tabla" data-grafico="consultas" hidden>
+                    <table class="table table-sm">
+                        <thead><tr><th>Día</th><th>Consultas</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.ConsultasPorDia)
+                            {
+                                <tr><td>@p.Etiqueta</td><td>@N(p.Valor)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo">Calidad de las respuestas</h2>
+                    <p class="grafico-tarjeta__subtitulo">Últimos 30 días</p>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex align-items-baseline justify-content-between mb-2">
+                    <span class="indicador__valor">@Model.PorcentajeConDatos.ToString("0", cultura) %</span>
+                    <span class="indicador__detalle">@N(Model.RespuestasConDatos) de @N(Model.Consultas30Dias) con información</span>
+                </div>
+                <div class="medidor mb-3" role="meter" aria-valuemin="0" aria-valuemax="100"
+                     aria-valuenow="@Model.PorcentajeConDatos.ToString("0", System.Globalization.CultureInfo.InvariantCulture)"
+                     aria-label="Consultas respondidas con información">
+                    <div class="medidor__relleno" style="width:@Model.PorcentajeConDatos.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                </div>
+                <ul class="estado-lista">
+                    <li><i class="fa fa-check-circle fa-fw estado--bien" aria-hidden="true"></i>Respondidas con datos<span class="valor">@N(Model.RespuestasConDatos)</span></li>
+                    <li><i class="fa fa-search-minus fa-fw estado--aviso" aria-hidden="true"></i>Sin resultados en la base<span class="valor">@N(Model.RespuestasSinResultados)</span></li>
+                    <li><i class="fa fa-question-circle fa-fw estado--serio" aria-hidden="true"></i>No entendidas<span class="valor">@N(Model.RespuestasNoReconocidas)</span></li>
+                    <li><i class="fa fa-times-circle fa-fw estado--critico" aria-hidden="true"></i>Con error<span class="valor">@N(Model.RespuestasConError)</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prestadores por grupo + intenciones -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo" id="titulo-prestadores">Prestadores por grupo</h2>
+                    <p class="grafico-tarjeta__subtitulo">Personas y establecimientos publicados</p>
+                </div>
+                <button type="button" class="grafico-tarjeta__alternar" data-alternar="prestadores" aria-expanded="false">Ver tabla</button>
+            </div>
+            <div class="card-body pt-0">
+                <div class="grafico-lienzo grafico-lienzo--bajo" data-vista="grafico" data-grafico="prestadores">
+                    @if (hayPrestadores)
+                    {
+                        <canvas id="grafico-prestadores" role="img"
+                                aria-label="Prestadores por grupo; el detalle está en la vista de tabla"></canvas>
+                    }
+                    else
+                    {
+                        <div class="grafico-vacio"><i class="fa fa-concierge-bell" aria-hidden="true"></i>Todavía no hay prestadores publicados.</div>
+                    }
+                </div>
+                <div class="grafico-tabla" data-vista="tabla" data-grafico="prestadores" hidden>
+                    <table class="table table-sm">
+                        <thead><tr><th>Grupo</th><th>Prestadores</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.PrestadoresPorGrupo)
+                            {
+                                <tr><td>@p.Etiqueta</td><td>@N(p.Valor)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo" id="titulo-intenciones">Lo que más preguntan</h2>
+                    <p class="grafico-tarjeta__subtitulo">Intenciones detectadas por BERT · últimos 30 días</p>
+                </div>
+                <button type="button" class="grafico-tarjeta__alternar" data-alternar="intenciones" aria-expanded="false">Ver tabla</button>
+            </div>
+            <div class="card-body pt-0">
+                <div class="grafico-lienzo grafico-lienzo--bajo" data-vista="grafico" data-grafico="intenciones">
+                    @if (hayIntenciones)
+                    {
+                        <canvas id="grafico-intenciones" role="img"
+                                aria-label="Intenciones más frecuentes; el detalle está en la vista de tabla"></canvas>
+                    }
+                    else
+                    {
+                        <div class="grafico-vacio"><i class="fa fa-robot" aria-hidden="true"></i>Aún no hay preguntas al asistente en estos 30 días.</div>
+                    }
+                </div>
+                <div class="grafico-tabla" data-vista="tabla" data-grafico="intenciones" hidden>
+                    <table class="table table-sm">
+                        <thead><tr><th>Intención</th><th>Consultas</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in Model.IntencionesFrecuentes)
+                            {
+                                <tr><td>@p.Etiqueta</td><td>@N(p.Valor)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Consultas sin resultado + accesos rápidos -->
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo">Preguntas que el asistente no pudo responder</h2>
+                    <p class="grafico-tarjeta__subtitulo">Sirven para agregar ejemplos y reentrenar a BERT</p>
+                </div>
+                <a asp-controller="ConsultasAsistente" asp-action="Index" class="small text-nowrap">Ver todas</a>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.ConsultasSinResultado.Count == 0)
+                {
+                    <div class="grafico-vacio py-4"><i class="fa fa-smile" aria-hidden="true"></i>No hay preguntas sin respuesta.</div>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th class="ps-3 w-50">Mensaje</th><th>Intención</th><th class="pe-3 text-end">Fecha</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in Model.ConsultasSinResultado)
+                            {
+                                <tr>
+                                    <td class="ps-3">
+                                        @Formato.Recortar(c.Mensaje, 60)
+                                        <div class="small text-muted">
+                                            @if (c.Tipo == "NoReconocida")
+                                            {
+                                                <i class="fa fa-question-circle estado--serio" aria-hidden="true"></i><span> No entendida</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fa fa-search-minus estado--aviso" aria-hidden="true"></i><span> Sin resultados</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="small">@(c.Intencion ?? "—")</td>
+                                    <td class="pe-3 text-end small text-nowrap">@c.Fecha.ToString("dd/MM HH:mm", cultura)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header py-3">
+                <h2 class="grafico-tarjeta__titulo">Accesos rápidos</h2>
+                <p class="grafico-tarjeta__subtitulo">Registros por módulo</p>
+            </div>
+            <div class="card-body">
+                <div class="accesos-rapidos">
+                    @foreach (var m in Model.Modulos)
+                    {
+                        <a asp-controller="@m.Controlador" asp-action="Index" class="acceso-rapido">
+                            <i class="fa @m.Icono" aria-hidden="true"></i>
+                            <span>@m.Titulo</span>
+                            <strong>@N(m.Total)</strong>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="datos-graficos">@Json.Serialize(datosGraficos)</script>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="~/js/panel-graficos.js" asp-append-version="true"></script>
+}

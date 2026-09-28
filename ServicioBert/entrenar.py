@@ -19,6 +19,7 @@ Uso (con el servicio detenido):
 """
 import argparse
 import json
+import os
 import random
 import time
 import unicodedata
@@ -32,7 +33,8 @@ from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
 
 CARPETA = Path(__file__).resolve().parent
 ARCHIVO_DATOS = CARPETA / "datos" / "intenciones.json"
-CARPETA_MODELO = CARPETA / "modelo"
+# Igual que en servicio.py: BERT_MODELO permite entrenar en otra carpeta mientras el servicio usa la actual
+CARPETA_MODELO = Path(os.environ.get("BERT_MODELO", CARPETA / "modelo"))
 MODELO_BASE = "dccuchile/bert-base-spanish-wwm-uncased"  # BETO
 LONGITUD_MAXIMA = 64
 SEMILLA = 42
@@ -201,7 +203,7 @@ def entrenar(ejemplos: list[tuple[str, str]], args) -> None:
     exactitud, errores, por_intencion = evaluar(modelo, tokenizer, validacion, nombres) if validacion else (0, [], {})
 
     try:
-        CARPETA_MODELO.mkdir(exist_ok=True)
+        CARPETA_MODELO.mkdir(parents=True, exist_ok=True)
         modelo.save_pretrained(CARPETA_MODELO)
         tokenizer.save_pretrained(CARPETA_MODELO)
     except PermissionError:

@@ -11,3 +11,4 @@ __pycache__/
 
 # Fotos subidas desde el panel
 wwwroot/uploads/
+ServicioBert/modelo_*/
