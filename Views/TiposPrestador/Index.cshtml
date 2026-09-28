@@ -1,0 +1,73 @@
+@model IEnumerable<TipoPrestador>
+@{
+    ViewData["Title"] = "Tipos de servicio";
+    var clase = (string?)ViewBag.Clase;
+    var totales = (Dictionary<int, int>)ViewBag.Totales;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h2 class="mb-0">Tipos de servicio</h2>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" asp-route-clase="@clase" class="btn btn-primary">Nuevo tipo</a>
+        <a asp-controller="Prestadores" asp-action="Index" class="btn btn-outline-secondary">Prestadores</a>
+    </div>
+</div>
+<p class="text-muted">Catálogo de lo que se puede ofrecer: personas (chofer, guía, barbero…) y establecimientos (hotel, restaurante, pyme…).</p>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a asp-action="Index" class="nav-link @(clase == null ? "active" : "")">Todos</a></li>
+    <li class="nav-item"><a asp-action="Index" asp-route-clase="@ClasesPrestador.Persona" class="nav-link @(clase == ClasesPrestador.Persona ? "active" : "")">Personas</a></li>
+    <li class="nav-item"><a asp-action="Index" asp-route-clase="@ClasesPrestador.Establecimiento" class="nav-link @(clase == ClasesPrestador.Establecimiento ? "active" : "")">Establecimientos</a></li>
+</ul>
+
+<form asp-action="Index" method="get" class="row g-2 mb-3">
+    <input type="hidden" name="clase" value="@clase" />
+    <div class="col-sm-8 col-md-6">
+        <input type="search" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar por nombre" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+        <a asp-action="Index" asp-route-clase="@clase" class="btn btn-link">Limpiar</a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay registros para mostrar.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Clase</th>
+                    <th>Grupo</th>
+                    <th>Prestadores</th>
+                    <th>Activo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    var total = totales.GetValueOrDefault(item.IdTipoPrestador);
+                    <tr>
+                        <td><i class="fa @SitioPublico.IconoTipo(item) fa-fw text-secondary me-1"></i>@item.Nombre</td>
+                        <td>@item.Clase</td>
+                        <td>@GruposPrestador.Nombre(item.Grupo)</td>
+                        <td><a asp-controller="Prestadores" asp-action="Index" asp-route-tipo="@item.IdTipoPrestador">@total</a></td>
+                        <td>@Formato.SiNo(item.Activo)</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-controller="Prestadores" asp-action="Create" asp-route-tipo="@item.IdTipoPrestador" asp-route-clase="@item.Clase" class="btn btn-sm btn-outline-success">Registrar</a>
+                            <a asp-action="Edit" asp-route-id="@item.IdTipoPrestador" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a asp-action="Delete" asp-route-id="@item.IdTipoPrestador" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Total: @Model.Count() registro(s)</p>
+}

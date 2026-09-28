@@ -38,6 +38,20 @@ namespace AppDonnyCuevas20210074.Data
                 db.SaveChanges();
             }
 
+            // Tipos de servicio iniciales (el administrador puede agregar, editar o desactivar)
+            if (!db.TiposPrestador.Any())
+            {
+                db.TiposPrestador.AddRange(TiposPrestadorIniciales.Select(t => new TipoPrestador
+                {
+                    Nombre = t.Nombre,
+                    Clase = t.Clase,
+                    Grupo = t.Grupo,
+                    Icono = t.Icono,
+                    Activo = true
+                }));
+                db.SaveChanges();
+            }
+
             // Datos curiosos iniciales del sitio público (se editan desde el panel)
             if (!db.DatosCuriosos.Any())
             {
@@ -46,6 +60,34 @@ namespace AppDonnyCuevas20210074.Data
                 db.SaveChanges();
             }
         }
+
+        private const string P = ClasesPrestador.Persona;
+        private const string E = ClasesPrestador.Establecimiento;
+
+        private static readonly (string Nombre, string Clase, string Grupo, string Icono)[] TiposPrestadorIniciales =
+        {
+            // Personas que ofrecen un servicio
+            ("Chofer / Taxista", P, GruposPrestador.Transporte, "fa-car"),
+            ("Motoconchista", P, GruposPrestador.Transporte, "fa-motorcycle"),
+            ("Guía turístico", P, GruposPrestador.Guia, "fa-hiking"),
+            ("Barbero", P, GruposPrestador.Servicio, "fa-cut"),
+            ("Estilista", P, GruposPrestador.Servicio, "fa-spa"),
+            ("Mecánico", P, GruposPrestador.Servicio, "fa-wrench"),
+            ("Fotógrafo", P, GruposPrestador.Servicio, "fa-camera"),
+            ("Artesano", P, GruposPrestador.Comercio, "fa-palette"),
+            ("Cocinero / Comida casera", P, GruposPrestador.Gastronomia, "fa-utensils"),
+            // Establecimientos
+            ("Hotel", E, GruposPrestador.Alojamiento, "fa-hotel"),
+            ("Cabaña / Casa de huéspedes", E, GruposPrestador.Alojamiento, "fa-home"),
+            ("Restaurante", E, GruposPrestador.Gastronomia, "fa-utensils"),
+            ("Cafetería", E, GruposPrestador.Gastronomia, "fa-coffee"),
+            ("Colmado", E, GruposPrestador.Comercio, "fa-shopping-basket"),
+            ("Tienda / Pyme", E, GruposPrestador.Comercio, "fa-store"),
+            ("Farmacia", E, GruposPrestador.Comercio, "fa-prescription-bottle-alt"),
+            ("Barbería / Salón de belleza", E, GruposPrestador.Servicio, "fa-cut"),
+            ("Taller", E, GruposPrestador.Servicio, "fa-tools"),
+            ("Agencia de transporte / Rent car", E, GruposPrestador.Transporte, "fa-bus")
+        };
 
         private static readonly (string Categoria, string Texto)[] DatosCuriososIniciales =
         {

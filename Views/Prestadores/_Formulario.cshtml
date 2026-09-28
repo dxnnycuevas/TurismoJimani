@@ -1,0 +1,287 @@
+@model Prestador
+@{
+    var tipos = (List<TipoPrestador>)ViewBag.Tipos;
+    var servicios = (List<Servicio>)ViewBag.Servicios;
+    var seleccionados = (HashSet<int>)ViewBag.ServiciosSeleccionados;
+    var tipoActual = tipos.FirstOrDefault(t => t.IdTipoPrestador == Model.IdTipoPrestador);
+    var claseActual = tipoActual?.Clase ?? (string?)ViewBag.ClaseInicial ?? ClasesPrestador.Persona;
+    var grupoActual = tipoActual?.Grupo;
+    var totalFotos = Model.Imagenes.Count;
+
+    // Etiquetas que cambian según el grupo del tipo elegido (las usa el script de abajo)
+    var etiquetas = GruposPrestador.Todos.ToDictionary(
+        g => g.Clave,
+        g => new { capacidad = GruposPrestador.EtiquetaCapacidad(g.Clave), especialidad = GruposPrestador.EtiquetaEspecialidad(g.Clave) });
+}
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<!-- 1. Tipo de prestador -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">1. ¿Qué ofrece?</div>
+    <div class="card-body row g-3">
+        <div class="col-12">
+            <div class="btn-group" role="group" aria-label="Clase de prestador">
+                <input type="radio" class="btn-check" name="claseFormulario" id="clase-persona" value="@ClasesPrestador.Persona" autocomplete="off" checked="@(claseActual == ClasesPrestador.Persona)" />
+                <label class="btn btn-outline-primary" for="clase-persona"><i class="fa fa-user me-1"></i>Una persona <small class="d-none d-md-inline">(chofer, guía, barbero…)</small></label>
+                <input type="radio" class="btn-check" name="claseFormulario" id="clase-establecimiento" value="@ClasesPrestador.Establecimiento" autocomplete="off" checked="@(claseActual == ClasesPrestador.Establecimiento)" />
+                <label class="btn btn-outline-primary" for="clase-establecimiento"><i class="fa fa-store me-1"></i>Un establecimiento <small class="d-none d-md-inline">(hotel, restaurante, pyme…)</small></label>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="IdTipoPrestador" class="form-label">Tipo de servicio</label>
+            <select asp-for="IdTipoPrestador" class="form-select" id="tipoPrestador">
+                <option value="">-- Seleccione --</option>
+                @foreach (var tipo in tipos)
+                {
+                    <option value="@tipo.IdTipoPrestador" data-clase="@tipo.Clase" data-grupo="@tipo.Grupo"
+                            selected="@(tipo.IdTipoPrestador == Model.IdTipoPrestador)">@tipo.Nombre@(tipo.Activo ? "" : " (inactivo)")</option>
+                }
+            </select>
+            <div class="form-text">¿No está el que necesita? <a asp-controller="TiposPrestador" asp-action="Create" target="_blank">Crear un tipo de servicio</a></div>
+            <span asp-validation-for="IdTipoPrestador" class="text-danger small"></span>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Datos principales -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">2. Datos principales</div>
+    <div class="card-body row g-3">
+        <div class="col-md-6">
+            <label asp-for="Nombre" class="form-label" id="etiquetaNombre">Nombre</label>
+            <input asp-for="Nombre" class="form-control" />
+            <span asp-validation-for="Nombre" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Especialidad" class="form-label" id="etiquetaEspecialidad">@GruposPrestador.EtiquetaEspecialidad(grupoActual)</label>
+            <input asp-for="Especialidad" class="form-control" />
+            <span asp-validation-for="Especialidad" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-12">
+            <label asp-for="DescripcionCorta" class="form-label">Descripción corta</label>
+            <input asp-for="DescripcionCorta" class="form-control" placeholder="Una línea que aparece en las tarjetas del sitio" />
+            <span asp-validation-for="DescripcionCorta" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-12">
+            <label asp-for="Descripcion" class="form-label">Descripción completa</label>
+            <textarea asp-for="Descripcion" class="form-control" rows="4" placeholder="Qué ofrece, experiencia, qué lo hace especial…"></textarea>
+            <span asp-validation-for="Descripcion" class="text-danger small"></span>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Fotos -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">3. Álbum de fotos</div>
+    <div class="card-body">
+        <label for="fotos" class="form-label">Subir fotos (puede elegir varias a la vez)</label>
+        <input type="file" id="fotos" name="fotos" class="form-control" multiple accept="@AlmacenImagenes.ExtensionesAceptadas" />
+        <div class="form-text">
+            JPG, PNG, WEBP o GIF de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB cada una.
+            @if (totalFotos > 0)
+            {
+                <span>Ya tiene @totalFotos foto(s); las nuevas se agregan al álbum. Para cambiar la portada o quitar fotos use la ficha del prestador.</span>
+            }
+            else
+            {
+                <span>La primera foto será la de portada.</span>
+            }
+        </div>
+        <span class="text-danger small">@Html.ValidationMessage("fotos")</span>
+    </div>
+</div>
+
+<!-- 4. Contacto -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">4. Contacto</div>
+    <div class="card-body row g-3">
+        <div class="col-md-4">
+            <label asp-for="Telefono" class="form-label">Teléfono</label>
+            <input asp-for="Telefono" class="form-control" type="tel" placeholder="809-000-0000" />
+            <span asp-validation-for="Telefono" class="text-danger small"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="WhatsApp" class="form-label">WhatsApp</label>
+            <input asp-for="WhatsApp" class="form-control" type="tel" placeholder="829-000-0000" />
+            <span asp-validation-for="WhatsApp" class="text-danger small"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Correo" class="form-label">Correo</label>
+            <input asp-for="Correo" class="form-control" type="email" />
+            <span asp-validation-for="Correo" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="RedSocial" class="form-label">Red social (Facebook, Instagram…)</label>
+            <input asp-for="RedSocial" class="form-control" type="url" placeholder="https://" />
+            <span asp-validation-for="RedSocial" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="SitioWeb" class="form-label">Sitio web</label>
+            <input asp-for="SitioWeb" class="form-control" type="url" placeholder="https://" />
+            <span asp-validation-for="SitioWeb" class="text-danger small"></span>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Detalles del servicio -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">5. Detalles del servicio</div>
+    <div class="card-body row g-3">
+        <div class="col-md-6">
+            <label asp-for="ZonaCobertura" class="form-label">Zona donde ofrece el servicio</label>
+            <input asp-for="ZonaCobertura" class="form-control" placeholder="Ej.: Jimaní, Duvergé y La Descubierta" />
+            <span asp-validation-for="ZonaCobertura" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="HorarioAtencion" class="form-label">Horario de atención</label>
+            <input asp-for="HorarioAtencion" class="form-control" placeholder="Ej.: Lunes a sábado, 8:00 a. m. – 6:00 p. m." />
+            <span asp-validation-for="HorarioAtencion" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="PrecioDesde" class="form-label">Precio desde (RD$)</label>
+            <input asp-for="PrecioDesde" class="form-control" type="number" step="0.01" min="0" />
+            <span asp-validation-for="PrecioDesde" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="PrecioHasta" class="form-label">Precio hasta (RD$)</label>
+            <input asp-for="PrecioHasta" class="form-control" type="number" step="0.01" min="0" />
+            <span asp-validation-for="PrecioHasta" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="InformacionPrecio" class="form-label">Nota sobre el precio</label>
+            <input asp-for="InformacionPrecio" class="form-control" placeholder="Ej.: RD$ 500 por viaje dentro del pueblo" />
+            <span asp-validation-for="InformacionPrecio" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Capacidad" class="form-label" id="etiquetaCapacidad">@GruposPrestador.EtiquetaCapacidad(grupoActual)</label>
+            <input asp-for="Capacidad" class="form-control" type="number" min="0" />
+            <span asp-validation-for="Capacidad" class="text-danger small"></span>
+        </div>
+        <div class="col-md-9">
+            <label asp-for="EnlaceExterno" class="form-label">Enlace para reservar, ver el menú o el catálogo</label>
+            <input asp-for="EnlaceExterno" class="form-control" type="url" placeholder="https://" />
+            <span asp-validation-for="EnlaceExterno" class="text-danger small"></span>
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-4">
+            <div class="form-check">
+                <input asp-for="RequiereReserva" class="form-check-input" />
+                <label asp-for="RequiereReserva" class="form-check-label">Requiere reserva o cita</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="ServicioDomicilio" class="form-check-input" />
+                <label asp-for="ServicioDomicilio" class="form-check-label">Ofrece servicio a domicilio</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Ubicación -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">6. Ubicación <small class="text-muted fw-normal" data-solo-persona>(opcional para personas)</small></div>
+    <div class="card-body row g-3">
+        <div class="col-md-6">
+            <label asp-for="Direccion" class="form-label">Dirección</label>
+            <input asp-for="Direccion" class="form-control" />
+            <span asp-validation-for="Direccion" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Municipio" class="form-label">Municipio</label>
+            <input asp-for="Municipio" class="form-control" />
+            <span asp-validation-for="Municipio" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Provincia" class="form-label">Provincia</label>
+            <input asp-for="Provincia" class="form-control" />
+            <span asp-validation-for="Provincia" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Latitud" class="form-label">Latitud</label>
+            <input asp-for="Latitud" class="form-control" type="number" step="any" placeholder="18.4917" />
+            <span asp-validation-for="Latitud" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Longitud" class="form-label">Longitud</label>
+            <input asp-for="Longitud" class="form-control" type="number" step="any" placeholder="-71.8514" />
+            <span asp-validation-for="Longitud" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6 align-self-end">
+            <div class="form-text">Con latitud y longitud el sitio muestra el mapa y el botón «Cómo llegar». Puede copiarlas desde Google Maps.</div>
+        </div>
+    </div>
+</div>
+
+<!-- 7. Comodidades y publicación -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">7. Comodidades y publicación</div>
+    <div class="card-body row g-3">
+        <div class="col-md-8">
+            <label class="form-label d-block">Comodidades</label>
+            <div class="d-flex flex-wrap gap-3">
+                @foreach (var servicio in servicios)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="serviciosSeleccionados" value="@servicio.IdServicio"
+                               id="ser_@servicio.IdServicio" checked="@seleccionados.Contains(servicio.IdServicio)" />
+                        <label class="form-check-label" for="ser_@servicio.IdServicio">@servicio.Nombre</label>
+                    </div>
+                }
+            </div>
+            @if (!servicios.Any())
+            {
+                <div class="form-text">No hay comodidades registradas (wifi, parqueo…). <a asp-controller="Servicios" asp-action="Create" target="_blank">Registrar una</a></div>
+            }
+        </div>
+        <div class="col-md-4">
+            <div class="form-check">
+                <input asp-for="Activo" class="form-check-input" />
+                <label asp-for="Activo" class="form-check-label">Publicado en el sitio</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="Destacado" class="form-check-input" />
+                <label asp-for="Destacado" class="form-check-label">Destacado</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Filtra los tipos según persona/establecimiento y ajusta las etiquetas según el grupo del tipo
+    (function () {
+        const etiquetas = @Json.Serialize(etiquetas);
+        const lista = document.getElementById("tipoPrestador");
+        const opciones = Array.from(lista.querySelectorAll("option[data-clase]"));
+        const radios = document.querySelectorAll("input[name=claseFormulario]");
+
+        function claseElegida() {
+            return document.querySelector("input[name=claseFormulario]:checked")?.value ?? "@ClasesPrestador.Persona";
+        }
+
+        function aplicarClase() {
+            const clase = claseElegida();
+            opciones.forEach(o => { o.hidden = o.dataset.clase !== clase; });
+            const actual = lista.selectedOptions[0];
+            if (actual && actual.dataset.clase && actual.dataset.clase !== clase) lista.value = "";
+
+            const esPersona = clase === "@ClasesPrestador.Persona";
+            document.getElementById("etiquetaNombre").textContent = esPersona ? "Nombre completo de la persona" : "Nombre del establecimiento";
+            document.querySelectorAll("[data-solo-persona]").forEach(e => e.hidden = !esPersona);
+            aplicarGrupo();
+        }
+
+        function aplicarGrupo() {
+            const grupo = lista.selectedOptions[0]?.dataset.grupo;
+            const textos = etiquetas[grupo] ?? { capacidad: "Capacidad", especialidad: "Especialidad" };
+            document.getElementById("etiquetaCapacidad").textContent = textos.capacidad;
+            document.getElementById("etiquetaEspecialidad").textContent = textos.especialidad;
+        }
+
+        radios.forEach(r => r.addEventListener("change", aplicarClase));
+        lista.addEventListener("change", aplicarGrupo);
+        aplicarClase();
+    })();
+</script>

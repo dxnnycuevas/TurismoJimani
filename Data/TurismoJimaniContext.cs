@@ -16,9 +16,8 @@ namespace AppDonnyCuevas20210074.Data
         public DbSet<Lugar> Lugares => Set<Lugar>();
         public DbSet<Categoria> Categorias => Set<Categoria>();
         public DbSet<Atractivo> Atractivos => Set<Atractivo>();
-        public DbSet<Alojamiento> Alojamientos => Set<Alojamiento>();
-        public DbSet<Restaurante> Restaurantes => Set<Restaurante>();
-        public DbSet<Transporte> Transportes => Set<Transporte>();
+        public DbSet<TipoPrestador> TiposPrestador => Set<TipoPrestador>();
+        public DbSet<Prestador> Prestadores => Set<Prestador>();
         public DbSet<Servicio> Servicios => Set<Servicio>();
         public DbSet<Imagen> Imagenes => Set<Imagen>();
         public DbSet<Horario> Horarios => Set<Horario>();
@@ -41,27 +40,13 @@ namespace AppDonnyCuevas20210074.Data
             modelBuilder.Entity<Servicio>().HasIndex(s => s.Nombre).IsUnique();
             modelBuilder.Entity<Intencion>().HasIndex(i => i.Nombre).IsUnique();
             modelBuilder.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
+            modelBuilder.Entity<TipoPrestador>().HasIndex(t => t.Nombre).IsUnique();
 
             // ---- Relaciones 1:1 (el IdLugar es UNIQUE en cada una de estas tablas) ----
             modelBuilder.Entity<Lugar>()
                 .HasOne(l => l.Atractivo)
                 .WithOne(a => a.Lugar)
                 .HasForeignKey<Atractivo>(a => a.IdLugar);
-
-            modelBuilder.Entity<Lugar>()
-                .HasOne(l => l.Alojamiento)
-                .WithOne(a => a.Lugar)
-                .HasForeignKey<Alojamiento>(a => a.IdLugar);
-
-            modelBuilder.Entity<Lugar>()
-                .HasOne(l => l.Restaurante)
-                .WithOne(r => r.Lugar)
-                .HasForeignKey<Restaurante>(r => r.IdLugar);
-
-            modelBuilder.Entity<Lugar>()
-                .HasOne(l => l.Transporte)
-                .WithOne(t => t.Lugar)
-                .HasForeignKey<Transporte>(t => t.IdLugar);
 
             // ---- Muchos a muchos: LugarCategoria y LugarServicio (sin columnas propias) ----
             modelBuilder.Entity<Lugar>()
@@ -73,6 +58,37 @@ namespace AppDonnyCuevas20210074.Data
                 .HasMany(l => l.Servicios)
                 .WithMany(s => s.Lugares)
                 .UsingEntity(j => j.ToTable("LugarServicio"));
+
+            modelBuilder.Entity<Prestador>()
+                .HasMany(p => p.Servicios)
+                .WithMany(s => s.Prestadores)
+                .UsingEntity(j => j.ToTable("PrestadorServicio"));
+
+            // ---- Prestadores: no se puede borrar un tipo que tenga prestadores ----
+            modelBuilder.Entity<Prestador>()
+                .HasOne(p => p.TipoPrestador)
+                .WithMany(t => t.Prestadores)
+                .HasForeignKey(p => p.IdTipoPrestador)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Prestador>().HasIndex(p => p.Nombre);
+
+            // ---- Imágenes: pertenecen a un lugar o a un prestador (exactamente uno) ----
+            modelBuilder.Entity<Imagen>()
+                .HasOne(i => i.Lugar)
+                .WithMany(l => l.Imagenes)
+                .HasForeignKey(i => i.IdLugar)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Imagen>()
+                .HasOne(i => i.Prestador)
+                .WithMany(p => p.Imagenes)
+                .HasForeignKey(i => i.IdPrestador)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Imagen>()
+                .ToTable(t => t.HasCheckConstraint("CK_Imagenes_Propietario",
+                    "(IdLugar IS NOT NULL AND IdPrestador IS NULL) OR (IdLugar IS NULL AND IdPrestador IS NOT NULL)"));
 
             // ---- Rutas: dos FK hacia Lugares, sin cascada (evita ciclos de borrado en SQL Server) ----
             modelBuilder.Entity<Ruta>()

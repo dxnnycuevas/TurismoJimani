@@ -21,5 +21,7 @@ namespace AppDonnyCuevas20210074.Models
         public bool Activo { get; set; } = true;
 
         public virtual ICollection<Lugar> Lugares { get; set; } = new List<Lugar>();
+
+        public virtual ICollection<Prestador> Prestadores { get; set; } = new List<Prestador>();
     }
 }

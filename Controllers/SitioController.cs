@@ -25,10 +25,17 @@ public class SitioController : Controller
         .AsNoTracking()
         .Where(l => l.Activo)
         .Include(l => l.Atractivo)
-        .Include(l => l.Alojamiento)
-        .Include(l => l.Restaurante)
-        .Include(l => l.Transporte)
         .Include(l => l.Imagenes);
+
+    // Prestadores publicados con su tipo y fotos
+    private IQueryable<Prestador> PrestadoresPublicados() => _context.Prestadores
+        .AsNoTracking()
+        .Where(p => p.Activo)
+        .Include(p => p.TipoPrestador)
+        .Include(p => p.Imagenes);
+
+    private Task<int> ContarGrupoAsync(string grupo) =>
+        _context.Prestadores.CountAsync(p => p.Activo && p.TipoPrestador!.Grupo == grupo);
 
     private IQueryable<Evento> EventosPublicados() => _context.Eventos
         .AsNoTracking()
@@ -43,9 +50,11 @@ public class SitioController : Controller
     {
         Lugares = await _context.Lugares.CountAsync(l => l.Activo),
         Atractivos = await _context.Atractivos.CountAsync(a => a.Lugar!.Activo),
-        Alojamientos = await _context.Alojamientos.CountAsync(a => a.Lugar!.Activo),
-        Restaurantes = await _context.Restaurantes.CountAsync(r => r.Lugar!.Activo),
-        Transportes = await _context.Transportes.CountAsync(t => t.Lugar!.Activo),
+        Prestadores = await _context.Prestadores.CountAsync(p => p.Activo),
+        Alojamientos = await ContarGrupoAsync(GruposPrestador.Alojamiento),
+        Restaurantes = await ContarGrupoAsync(GruposPrestador.Gastronomia),
+        Transportes = await ContarGrupoAsync(GruposPrestador.Transporte),
+        Guias = await ContarGrupoAsync(GruposPrestador.Guia),
         Rutas = await _context.Rutas.CountAsync(r => r.Activa),
         Eventos = await EventosProximos().CountAsync()
     };
@@ -97,6 +106,17 @@ public class SitioController : Controller
     // GET: /Sitio/Lugares?buscar=lago&tipo=atractivos&categoria=2
     public async Task<IActionResult> Lugares(string? buscar, string? tipo, int? categoria)
     {
+        // Los enlaces antiguos a alojamientos, restaurantes y transporte ahora están en Servicios
+        var grupoAntiguo = tipo switch
+        {
+            "alojamientos" => GruposPrestador.Alojamiento,
+            "restaurantes" => GruposPrestador.Gastronomia,
+            "transporte" => GruposPrestador.Transporte,
+            _ => null
+        };
+        if (grupoAntiguo != null)
+            return RedirectToAction(nameof(Servicios), new { grupo = grupoAntiguo, buscar });
+
         var consulta = LugaresPublicados();
 
         buscar = buscar?.Trim();
@@ -108,14 +128,10 @@ public class SitioController : Controller
                 (l.Municipio != null && l.Municipio.Contains(buscar)));
         }
 
-        consulta = tipo switch
-        {
-            "atractivos" => consulta.Where(l => l.Atractivo != null),
-            "alojamientos" => consulta.Where(l => l.Alojamiento != null),
-            "restaurantes" => consulta.Where(l => l.Restaurante != null),
-            "transporte" => consulta.Where(l => l.Transporte != null),
-            _ => consulta
-        };
+        if (tipo == "atractivos")
+            consulta = consulta.Where(l => l.Atractivo != null);
+        else
+            tipo = null;
 
         if (categoria.HasValue)
             consulta = consulta.Where(l => l.Categorias.Any(c => c.IdCategoria == categoria));
@@ -150,14 +166,10 @@ public class SitioController : Controller
 
         if (lugar == null) return NotFound();
 
-        // Otros lugares del mismo tipo (atractivo, alojamiento, restaurante o transporte)
-        var relacionados = LugaresPublicados().Where(l => l.IdLugar != lugar.IdLugar);
-        relacionados =
-            lugar.Atractivo != null ? relacionados.Where(l => l.Atractivo != null)
-            : lugar.Alojamiento != null ? relacionados.Where(l => l.Alojamiento != null)
-            : lugar.Restaurante != null ? relacionados.Where(l => l.Restaurante != null)
-            : lugar.Transporte != null ? relacionados.Where(l => l.Transporte != null)
-            : relacionados;
+        // Otros lugares para visitar (primero los destacados)
+        var relacionados = LugaresPublicados()
+            .Where(l => l.IdLugar != lugar.IdLugar)
+            .OrderByDescending(l => l.Atractivo != null && l.Atractivo.Destacado);
 
         var modelo = new LugarViewModel
         {
@@ -173,7 +185,88 @@ public class SitioController : Controller
                 .OrderBy(e => e.FechaInicio)
                 .Take(3)
                 .ToListAsync(),
-            Relacionados = await relacionados.OrderBy(l => l.Nombre).Take(3).ToListAsync()
+            Relacionados = await relacionados.ThenBy(l => l.Nombre).Take(3).ToListAsync()
+        };
+
+        return View(modelo);
+    }
+
+    // GET: /Sitio/Servicios?grupo=Transporte&clase=Persona&tipo=2&buscar=raul
+    public async Task<IActionResult> Servicios(string? buscar, string? grupo, string? clase, int? tipo)
+    {
+        var consulta = PrestadoresPublicados();
+
+        buscar = buscar?.Trim();
+        if (!string.IsNullOrEmpty(buscar))
+        {
+            consulta = consulta.Where(p =>
+                p.Nombre.Contains(buscar) ||
+                p.TipoPrestador!.Nombre.Contains(buscar) ||
+                (p.Especialidad != null && p.Especialidad.Contains(buscar)) ||
+                (p.DescripcionCorta != null && p.DescripcionCorta.Contains(buscar)));
+        }
+
+        if (!GruposPrestador.Todos.Any(g => g.Clave == grupo)) grupo = null;
+        if (!ClasesPrestador.Todas.Contains(clase)) clase = null;
+
+        if (grupo != null) consulta = consulta.Where(p => p.TipoPrestador!.Grupo == grupo);
+        if (clase != null) consulta = consulta.Where(p => p.TipoPrestador!.Clase == clase);
+        if (tipo.HasValue) consulta = consulta.Where(p => p.IdTipoPrestador == tipo);
+
+        var modelo = new ServiciosViewModel
+        {
+            Prestadores = await consulta
+                .OrderByDescending(p => p.Destacado)
+                .ThenBy(p => p.Nombre)
+                .AsSplitQuery()
+                .ToListAsync(),
+            // Solo los tipos que tienen prestadores publicados (para el filtro)
+            Tipos = await _context.TiposPrestador.AsNoTracking()
+                .Where(t => t.Prestadores.Any(p => p.Activo) && (grupo == null || t.Grupo == grupo))
+                .OrderBy(t => t.Nombre)
+                .ToListAsync(),
+            TotalesPorGrupo = await _context.Prestadores.AsNoTracking()
+                .Where(p => p.Activo)
+                .GroupBy(p => p.TipoPrestador!.Grupo)
+                .Select(g => new { g.Key, Total = g.Count() })
+                .ToDictionaryAsync(g => g.Key, g => g.Total),
+            Buscar = buscar,
+            Grupo = grupo,
+            Clase = clase,
+            Tipo = tipo
+        };
+
+        return View(modelo);
+    }
+
+    // GET: /Sitio/Prestador/5
+    public async Task<IActionResult> Prestador(int? id)
+    {
+        if (id == null) return NotFound();
+
+        // El personal puede ver un prestador aún no publicado para revisarlo
+        var consulta = RolesSistema.EsPersonal(User)
+            ? _context.Prestadores.AsNoTracking().Include(p => p.TipoPrestador).Include(p => p.Imagenes)
+            : PrestadoresPublicados();
+
+        var prestador = await consulta
+            .Include(p => p.Servicios)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(p => p.IdPrestador == id);
+
+        if (prestador == null) return NotFound();
+
+        var modelo = new PrestadorViewModel
+        {
+            Prestador = prestador,
+            // Otros del mismo grupo, primero los del mismo tipo
+            Relacionados = await PrestadoresPublicados()
+                .Where(p => p.IdPrestador != prestador.IdPrestador && p.TipoPrestador!.Grupo == prestador.TipoPrestador!.Grupo)
+                .OrderByDescending(p => p.IdTipoPrestador == prestador.IdTipoPrestador)
+                .ThenByDescending(p => p.Destacado)
+                .ThenBy(p => p.Nombre)
+                .Take(3)
+                .ToListAsync()
         };
 
         return View(modelo);

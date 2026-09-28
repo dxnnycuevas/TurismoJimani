@@ -15,9 +15,11 @@
     var servicios = new[]
     {
         ("fa-mountain", "", "Atractivos" + ConTotal(est.Atractivos), "Lago, montañas, áreas protegidas y sitios arqueológicos.", "Lugares", "atractivos"),
-        ("", "t-bohio", "Alojamientos" + ConTotal(est.Alojamientos), "Dónde dormir: precios, entrada y salida, y reservas.", "Lugares", "alojamientos"),
-        ("fa-utensils", "", "Restaurantes" + ConTotal(est.Restaurantes), "Sabores locales, horarios y servicio a domicilio.", "Lugares", "restaurantes"),
-        ("fa-bus", "", "Transporte" + ConTotal(est.Transportes), "Guaguas y opciones para moverte por la zona.", "Lugares", "transporte"),
+        ("", "t-bohio", "Alojamiento" + ConTotal(est.Alojamientos), "Hoteles y cabañas: precios, habitaciones y reservas.", "Servicios", GruposPrestador.Alojamiento),
+        ("fa-utensils", "", "Comida y bebida" + ConTotal(est.Restaurantes), "Restaurantes, cafeterías y comida casera.", "Servicios", GruposPrestador.Gastronomia),
+        ("fa-car", "", "Transporte" + ConTotal(est.Transportes), "Choferes, motoconchos y agencias para moverte.", "Servicios", GruposPrestador.Transporte),
+        ("fa-hiking", "", "Guías turísticos" + ConTotal(est.Guias), "Guías locales que conocen cada sendero.", "Servicios", GruposPrestador.Guia),
+        ("fa-store", "", "Comercios y otros servicios", "Colmados, pymes, barberos, mecánicos y más.", "Servicios", ""),
         ("fa-route", "", "Rutas" + ConTotal(est.Rutas), "Recorridos con distancia, duración y dificultad.", "Rutas", ""),
         ("", "t-sol", "Eventos" + ConTotal(est.Eventos), "Fiestas patronales, festivales y promociones.", "Eventos", ""),
     };
@@ -224,8 +226,12 @@
         <div class="row g-4">
             @foreach (var (iconoFa, simbolo, titulo, texto, accion, tipo) in servicios)
             {
-                <div class="col-md-6 col-lg-4 jm-revelar">
-                    <a asp-controller="Sitio" asp-action="@accion" asp-route-tipo="@(string.IsNullOrEmpty(tipo) ? null : tipo)" class="jm-servicio jm-vidrio jm-liquido">
+                // En Servicios el filtro es el grupo; en Lugares, el tipo
+                var enlace = accion == "Servicios"
+                    ? Url.Action("Servicios", "Sitio", new { grupo = string.IsNullOrEmpty(tipo) ? null : tipo })
+                    : Url.Action(accion, "Sitio", new { tipo = string.IsNullOrEmpty(tipo) ? null : tipo });
+                <div class="col-md-6 col-lg-3 jm-revelar">
+                    <a href="@enlace" class="jm-servicio jm-vidrio jm-liquido">
                         <span class="jm-servicio__icono" aria-hidden="true">
                             @if (string.IsNullOrEmpty(simbolo))
                             {

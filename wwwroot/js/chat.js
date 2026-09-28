@@ -123,7 +123,7 @@
     });
 
     agregarMensaje("Asistente",
-        "¡Hola! Soy el asistente turístico de Jimaní. Pregúntame por atractivos, alojamientos, restaurantes, rutas o transporte.");
+        "¡Hola! Soy el asistente turístico de Jimaní. Pregúntame por atractivos, alojamientos, dónde comer, transporte, guías turísticos, otros servicios o rutas.");
     comprobarServicio();
 
     // Pregunta enviada desde otra página del sitio (/Asistente?pregunta=...): se envía una sola vez

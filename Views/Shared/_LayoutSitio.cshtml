@@ -21,7 +21,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Turismo Jimaní</title>
-    <meta name="description" content="@(ViewData["Descripcion"] ?? "Descubre Jimaní: Lago Enriquillo, Sierra de Bahoruco, caritas taínas, fiestas patronales, alojamientos, restaurantes y rutas.")" />
+    <meta name="description" content="@(ViewData["Descripcion"] ?? "Descubre Jimaní: Lago Enriquillo, Sierra de Bahoruco, caritas taínas, fiestas patronales, alojamientos, restaurantes, guías, servicios y rutas.")" />
     <meta name="theme-color" content="#c2561a" />
     <script>document.documentElement.classList.add("jm-js");</script>
 
@@ -97,12 +97,19 @@
                             <a href="#" class="nav-link dropdown-toggle @Activo("Lugares", "Lugar")" data-bs-toggle="dropdown" aria-expanded="false">Destinos</a>
                             <ul class="dropdown-menu">
                                 <li><a asp-controller="Sitio" asp-action="Lugares" class="dropdown-item">Todos los lugares</a></li>
-                                @foreach (var tipo in SitioPublico.TiposLugar)
-                                {
-                                    <li><a asp-controller="Sitio" asp-action="Lugares" asp-route-tipo="@tipo.Clave" class="dropdown-item"><i class="fa @tipo.Icono fa-fw me-2 text-danger"></i>@tipo.Nombre</a></li>
-                                }
+                                <li><a asp-controller="Sitio" asp-action="Lugares" asp-route-tipo="atractivos" class="dropdown-item"><i class="fa fa-mountain fa-fw me-2 text-danger"></i>Atractivos</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li><a asp-controller="Sitio" asp-action="Sorpresa" class="dropdown-item"><i class="fa fa-dice fa-fw me-2 text-danger"></i>Sorpréndeme</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a href="#" class="nav-link dropdown-toggle @Activo("Servicios", "Prestador")" data-bs-toggle="dropdown" aria-expanded="false">Servicios</a>
+                            <ul class="dropdown-menu">
+                                <li><a asp-controller="Sitio" asp-action="Servicios" class="dropdown-item">Todos los servicios</a></li>
+                                @foreach (var grupo in SitioPublico.GruposServicio)
+                                {
+                                    <li><a asp-controller="Sitio" asp-action="Servicios" asp-route-grupo="@grupo.Clave" class="dropdown-item"><i class="fa @grupo.Icono fa-fw me-2 text-danger"></i>@grupo.Nombre</a></li>
+                                }
                             </ul>
                         </li>
                         <li class="nav-item"><a asp-controller="Sitio" asp-action="Eventos" class="nav-link @Activo("Eventos", "Evento")">Eventos</a></li>
@@ -209,9 +216,9 @@
                 <div class="col-6 col-lg-2">
                     <h3>Planifica</h3>
                     <ul>
-                        @foreach (var tipo in SitioPublico.TiposLugar)
+                        @foreach (var grupo in SitioPublico.GruposServicio)
                         {
-                            <li><a asp-controller="Sitio" asp-action="Lugares" asp-route-tipo="@tipo.Clave">@tipo.Nombre</a></li>
+                            <li><a asp-controller="Sitio" asp-action="Servicios" asp-route-grupo="@grupo.Clave">@grupo.Nombre</a></li>
                         }
                     </ul>
                 </div>

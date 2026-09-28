@@ -1,12 +1,12 @@
-@model Transporte
+@model TipoPrestador
 @{
-    ViewData["Title"] = "Nuevo transporte";
+    ViewData["Title"] = "Editar tipo de servicio";
 }
 
-<h2>Nuevo transporte</h2>
+<h2>Editar tipo de servicio</h2>
 <hr />
 
-<form asp-action="Create" method="post">
+<form asp-action="Edit" asp-route-id="@Model.IdTipoPrestador" method="post">
     <partial name="_Formulario" model="Model" />
 
     <div class="mt-4">

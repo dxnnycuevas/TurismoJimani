@@ -11,8 +11,10 @@ namespace AppDonnyCuevas20210074.Models
         [Key]
         public int IdImagen { get; set; }
 
-        [Required]
-        public int IdLugar { get; set; }
+        // La imagen pertenece a un lugar o a un prestador de servicios (solo a uno de los dos)
+        public int? IdLugar { get; set; }
+
+        public int? IdPrestador { get; set; }
 
         [Required]
         [StringLength(500)]
@@ -42,5 +44,8 @@ namespace AppDonnyCuevas20210074.Models
 
         [ForeignKey(nameof(IdLugar))]
         public virtual Lugar? Lugar { get; set; }
+
+        [ForeignKey(nameof(IdPrestador))]
+        public virtual Prestador? Prestador { get; set; }
     }
 }

@@ -1,0 +1,21 @@
+@model Prestador
+@{
+    ViewData["Title"] = "Editar prestador de servicios";
+}
+
+<h2>Editar prestador de servicios</h2>
+<p class="text-muted">Registre a una persona que ofrece un servicio (chofer, guía, barbero…) o a un establecimiento (hotel, restaurante, pyme…), con su descripción y su álbum de fotos.</p>
+<hr />
+
+<form asp-action="Edit" asp-route-id="@Model.IdPrestador" method="post" enctype="multipart/form-data">
+    <partial name="_Formulario" model="Model" />
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

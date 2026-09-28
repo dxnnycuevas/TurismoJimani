@@ -54,9 +54,6 @@ namespace AppDonnyCuevas20210074.Models
 
         // Navegación 1:1
         public virtual Atractivo? Atractivo { get; set; }
-        public virtual Alojamiento? Alojamiento { get; set; }
-        public virtual Restaurante? Restaurante { get; set; }
-        public virtual Transporte? Transporte { get; set; }
 
         // Navegación 1:N
         public virtual ICollection<Imagen> Imagenes { get; set; } = new List<Imagen>();

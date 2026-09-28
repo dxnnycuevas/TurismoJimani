@@ -1,9 +1,10 @@
-@model Imagen
+@model Prestador
 @{
-    ViewData["Title"] = "Nueva imagen";
+    ViewData["Title"] = "Nuevo prestador de servicios";
 }
 
-<h2>Nueva imagen</h2>
+<h2>Nuevo prestador de servicios</h2>
+<p class="text-muted">Registre a una persona que ofrece un servicio (chofer, guía, barbero…) o a un establecimiento (hotel, restaurante, pyme…), con su descripción y su álbum de fotos.</p>
 <hr />
 
 <form asp-action="Create" method="post" enctype="multipart/form-data">

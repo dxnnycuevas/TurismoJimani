@@ -1,0 +1,55 @@
+@model TipoPrestador
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="Nombre" class="form-label">Nombre del tipo</label>
+        <input asp-for="Nombre" class="form-control" placeholder="Ej.: Barbero, Hotel, Guía turístico" />
+        <span asp-validation-for="Nombre" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label d-block">Es…</label>
+        @foreach (var clase in ClasesPrestador.Todas)
+        {
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" asp-for="Clase" value="@clase" id="clase_@clase" />
+                <label class="form-check-label" for="clase_@clase">@(clase == ClasesPrestador.Persona ? "Una persona que ofrece un servicio" : "Un establecimiento o negocio")</label>
+            </div>
+        }
+        <span asp-validation-for="Clase" class="text-danger small d-block"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Grupo" class="form-label">Grupo</label>
+        <select asp-for="Grupo" class="form-select">
+            @foreach (var g in GruposPrestador.Todos)
+            {
+                <option value="@g.Clave">@g.Nombre</option>
+            }
+        </select>
+        <div class="form-text">Decide en qué sección del sitio aparece y qué pregunta del asistente lo encuentra (por ejemplo, «Transporte» responde a «necesito un taxi»).</div>
+        <span asp-validation-for="Grupo" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Icono" class="form-label">Icono (opcional)</label>
+        <input asp-for="Icono" class="form-control" placeholder="fa-cut" />
+        <div class="form-text">Nombre de un icono de <a href="https://fontawesome.com/v5/search?m=free" target="_blank" rel="noopener">Font Awesome 5</a>. Si lo deja vacío se usa el del grupo.</div>
+        <span asp-validation-for="Icono" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="Descripcion" class="form-label">Descripción</label>
+        <textarea asp-for="Descripcion" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="Descripcion" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="Activo" class="form-check-input" />
+            <label asp-for="Activo" class="form-check-label">Activo (se puede elegir al registrar prestadores)</label>
+        </div>
+    </div>
+</div>

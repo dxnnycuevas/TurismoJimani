@@ -11,7 +11,13 @@
 
     <div class="col-md-6">
         <label asp-for="TipoFuente" class="form-label">Tipo de fuente</label>
-        <input asp-for="TipoFuente" class="form-control" />
+        <input asp-for="TipoFuente" class="form-control" list="tipos-fuente" />
+        <datalist id="tipos-fuente">
+            <option value="Lugar"></option>
+            <option value="Atractivo"></option>
+            <option value="Prestador"></option>
+        </datalist>
+        <div class="form-text">«Lugar» o «Atractivo» con el Id del lugar; «Prestador» con el Id del prestador de servicios.</div>
         <span asp-validation-for="TipoFuente" class="text-danger small"></span>
     </div>
 

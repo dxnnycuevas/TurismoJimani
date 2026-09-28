@@ -12,6 +12,7 @@
     <title>@ViewData["Title"] - Turismo Jimaní</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AppDonnyCuevas20210074.styles.css" asp-append-version="true" />
 </head>
@@ -40,11 +41,18 @@
                             </li>
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Atractivos" asp-action="Index">Atractivos</a></li>
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Categorias" asp-action="Index">Categorías</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Alojamientos" asp-action="Index">Alojamientos</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Restaurantes" asp-action="Index">Restaurantes</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Transportes" asp-action="Index">Transportes</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Prestadores de servicios</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index">Todos los prestadores</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index" asp-route-clase="Persona"><i class="fa fa-user fa-fw me-1"></i>Personas</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Prestadores" asp-action="Index" asp-route-clase="Establecimiento"><i class="fa fa-store fa-fw me-1"></i>Establecimientos</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" asp-controller="TiposPrestador" asp-action="Index">Tipos de servicio</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Servicios" asp-action="Index">Comodidades</a></li>
+                                </ul>
+                            </li>
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Rutas" asp-action="Index">Rutas</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Servicios" asp-action="Index">Servicios</a></li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Contenido</a>
                                 <ul class="dropdown-menu">

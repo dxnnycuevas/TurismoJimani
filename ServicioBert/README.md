@@ -78,6 +78,15 @@ El servicio escucha solo en `127.0.0.1`, no es accesible desde otros equipos.
 
 ## Documentos de conocimiento
 
-Un documento de **Asistente ▸ Documentos de conocimiento** se incluye en la respuesta sobre un lugar
-cuando su `IdReferencia` es el `IdLugar` y su `TipoFuente` es `Lugar`, `Atractivo`, `Alojamiento`,
-`Restaurante`, `Transporte` o está vacío.
+Un documento de **Asistente ▸ Documentos de conocimiento** se incluye en la respuesta:
+
+- sobre un lugar turístico, cuando su `IdReferencia` es el `IdLugar` y su `TipoFuente` es `Lugar`, `Atractivo` o está vacío;
+- sobre un prestador de servicios (chofer, guía, hotel, restaurante...), cuando su `IdReferencia` es el
+  `IdPrestador` y su `TipoFuente` es `Prestador`.
+
+## Prestadores de servicios
+
+Hoteles, restaurantes, choferes, guías, barberos, comercios, etc. se registran en **Prestadores de servicios**.
+El **grupo** de su tipo (Alojamiento, Comida y bebida, Transporte, Guías, Comercios, Otros servicios) decide qué
+intención los encuentra: `BuscarAlojamiento`, `BuscarRestaurante`, `BuscarTransporte`, `BuscarGuia` o
+`BuscarServicio` (esta última busca en todos por tipo o especialidad: "¿hay barbero?").

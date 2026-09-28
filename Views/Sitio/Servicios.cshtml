@@ -1,0 +1,93 @@
+@model AppDonnyCuevas20210074.Models.Sitio.ServiciosViewModel
+@{
+    var grupoActual = GruposPrestador.Todos.FirstOrDefault(g => g.Clave == Model.Grupo);
+    ViewData["Title"] = grupoActual.Nombre ?? "Servicios";
+    ViewData["Subtitulo"] = "Personas y negocios de Jimaní que te ayudan en tu visita: dónde dormir y comer, quién te lleva, guías, comercios y más.";
+    ViewData["Descripcion"] = "Prestadores de servicios turísticos en Jimaní: alojamiento, comida, transporte, guías y comercios.";
+
+    var hayFiltros = !string.IsNullOrEmpty(Model.Buscar) || Model.Tipo.HasValue || Model.Clase != null;
+    int Total(string grupo) => Model.TotalesPorGrupo.GetValueOrDefault(grupo);
+}
+
+<section class="jm-seccion pt-4">
+    <div class="container">
+        <!-- Búsqueda y filtros -->
+        <div class="jm-panel jm-vidrio mb-4">
+            <div class="jm-filtros d-flex flex-wrap gap-2 mb-3">
+                <a asp-action="Servicios" asp-route-buscar="@Model.Buscar" asp-route-clase="@Model.Clase"
+                   class="jm-chip @(Model.Grupo == null ? "activo" : "")">Todos</a>
+                @foreach (var grupo in SitioPublico.GruposServicio)
+                {
+                    <a asp-action="Servicios" asp-route-grupo="@grupo.Clave" asp-route-buscar="@Model.Buscar" asp-route-clase="@Model.Clase"
+                       class="jm-chip @(grupo.Clave == Model.Grupo ? "activo" : "")"><i class="fa @grupo.Icono"></i>@grupo.Nombre@(Total(grupo.Clave) > 0 ? $" ({Total(grupo.Clave)})" : "")</a>
+                }
+            </div>
+            <form asp-action="Servicios" method="get" role="search">
+                <input type="hidden" name="grupo" value="@Model.Grupo" />
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label for="buscar" class="form-label small fw-semibold">Buscar</label>
+                        <input id="buscar" name="buscar" value="@Model.Buscar" class="form-control rounded-pill px-4" placeholder="Nombre, servicio o especialidad" />
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tipo" class="form-label small fw-semibold">Tipo de servicio</label>
+                        <select id="tipo" name="tipo" class="form-select rounded-pill px-4">
+                            <option value="">Todos</option>
+                            @foreach (var t in Model.Tipos)
+                            {
+                                <option value="@t.IdTipoPrestador" selected="@(t.IdTipoPrestador == Model.Tipo)">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="clase" class="form-label small fw-semibold">Quién</label>
+                        <select id="clase" name="clase" class="form-select rounded-pill px-4">
+                            <option value="">Todos</option>
+                            <option value="@ClasesPrestador.Persona" selected="@(Model.Clase == ClasesPrestador.Persona)">Personas</option>
+                            <option value="@ClasesPrestador.Establecimiento" selected="@(Model.Clase == ClasesPrestador.Establecimiento)">Negocios</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="jm-btn"><i class="fa fa-search"></i>Buscar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+            <p class="mb-0">
+                <strong class="text-danger">@Model.Prestadores.Count</strong> @(Model.Prestadores.Count == 1 ? "resultado" : "resultados")
+                @if (!string.IsNullOrEmpty(Model.Buscar))
+                {
+                    <span>para «<strong>@Model.Buscar</strong>»</span>
+                }
+            </p>
+            @if (hayFiltros)
+            {
+                <a asp-action="Servicios" asp-route-grupo="@Model.Grupo" class="small"><i class="fa fa-times me-1"></i>Quitar filtros</a>
+            }
+        </div>
+
+        @if (Model.Prestadores.Count == 0)
+        {
+            <div class="jm-vacio jm-vidrio">
+                <svg aria-hidden="true"><use href="#t-cactus" /></svg>
+                <h2 class="h4">Todavía no hay servicios registrados aquí</h2>
+                <p class="mb-0">Prueba con otra búsqueda o <a asp-controller="Asistente" asp-action="Index">pregúntale al asistente virtual</a>.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @for (var i = 0; i < Model.Prestadores.Count; i++)
+                {
+                    <div class="col-md-6 col-lg-4 jm-revelar">
+                        <partial name="_TarjetaPrestador" model="(Model.Prestadores[i], i)" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<partial name="_BannerAsistente" />

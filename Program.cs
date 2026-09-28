@@ -82,6 +82,9 @@ builder.Services.AddHttpClient<IClasificadorIntenciones, ClasificadorBert>(clien
 
 builder.Services.AddScoped<ChatbotService>();
 
+// Fotos subidas desde el panel (wwwroot/uploads)
+builder.Services.AddSingleton<AlmacenImagenes>();
+
 // Límite de mensajes al chat por dirección IP (el chat es público)
 builder.Services.AddRateLimiter(opciones =>
 {

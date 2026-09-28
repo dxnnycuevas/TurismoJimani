@@ -21,7 +21,8 @@ public static partial class TextoChat
     {
         "hotel", "hostal", "restaurante", "comedor", "cafeteria", "zona", "natural", "naturales", "parque",
         "nacional", "municipal", "municipio", "centro", "jimani", "lugar", "lugares", "sitio", "ruta", "rutas",
-        "republica", "dominicana", "provincia", "independencia"
+        "republica", "dominicana", "provincia", "independencia", "colmado", "tienda", "farmacia", "barberia",
+        "salon", "taller", "agencia", "cabana", "cabanas", "casa", "huespedes"
     };
 
     // Palabras de la pregunta que no sirven para filtrar por tipo o categoría
@@ -30,7 +31,9 @@ public static partial class TextoChat
         "lugar", "lugares", "atractivo", "atractivos", "turistico", "turisticos", "turistica", "turisticas",
         "visitar", "conocer", "sitio", "sitios", "ver", "ir", "recomiendas", "recomiendame", "busco", "buscar",
         "jimani", "hotel", "hoteles", "restaurante", "restaurantes", "comer", "transporte", "tienen", "registrados",
-        "cerca", "cercanos", "cercanas", "muestrame", "dame", "lista", "opciones", "quisiera", "necesito"
+        "cerca", "cercanos", "cercanas", "muestrame", "dame", "lista", "opciones", "quisiera", "necesito",
+        "servicio", "servicios", "alguien", "persona", "personas", "contratar", "negocio", "negocios",
+        "disponible", "disponibles", "ofrece", "ofrecen", "pueblo", "aqui", "zona", "local", "locales"
     };
 
     private static readonly Dictionary<string, int> Ordinales = new()

@@ -1,0 +1,60 @@
+@* Tarjeta de un prestador de servicios (persona o establecimiento) *@
+@model (Prestador Prestador, int Indice)
+@{
+    var p = Model.Prestador;
+    var tipo = p.TipoPrestador;
+    var imagen = SitioPublico.ImagenPrincipal(p);
+    var credito = imagen != null ? SitioPublico.Credito(imagen) : "";
+    var precio = SitioPublico.RangoPrecio(p.PrecioDesde, p.PrecioHasta);
+    var whatsapp = SitioPublico.EnlaceWhatsApp(p.WhatsApp, $"Hola {p.Nombre}, vi su perfil en Turismo Jimaní.");
+}
+<article class="jm-tarjeta jm-vidrio jm-liquido">
+    <a asp-controller="Sitio" asp-action="Prestador" asp-route-id="@p.IdPrestador" class="jm-tarjeta__media" tabindex="-1" aria-hidden="true">
+        @if (imagen != null)
+        {
+            <img src="@imagen.UrlImagen" alt="" loading="lazy" />
+        }
+        else
+        {
+            <partial name="_Ilustracion" model="(SitioPublico.Ilustracion(p), Model.Indice)" />
+        }
+        <span class="jm-etiqueta"><i class="fa @SitioPublico.IconoTipo(tipo)"></i>@tipo?.Nombre</span>
+        @if (!string.IsNullOrEmpty(credito))
+        {
+            <span class="jm-credito" title="@credito">@credito</span>
+        }
+    </a>
+    <div class="jm-tarjeta__cuerpo">
+        @if (p.Destacado)
+        {
+            <span class="jm-destacado mb-1"><i class="fa fa-star me-1"></i>Destacado</span>
+        }
+        <h3><a asp-controller="Sitio" asp-action="Prestador" asp-route-id="@p.IdPrestador">@p.Nombre</a></h3>
+        <p>@Formato.Recortar(p.DescripcionCorta ?? p.Descripcion, 130)</p>
+        <ul class="jm-meta">
+            @if (!string.IsNullOrWhiteSpace(p.Especialidad))
+            {
+                <li><i class="fa fa-info-circle"></i>@Formato.Recortar(p.Especialidad, 40)</li>
+            }
+            @if (!string.IsNullOrEmpty(precio))
+            {
+                <li><i class="fa fa-tag"></i>@precio</li>
+            }
+            @if (!string.IsNullOrWhiteSpace(p.ZonaCobertura))
+            {
+                <li><i class="fa fa-map"></i>@Formato.Recortar(p.ZonaCobertura, 40)</li>
+            }
+            else if (!string.IsNullOrWhiteSpace(p.Municipio))
+            {
+                <li><i class="fa fa-map-marker-alt"></i>@p.Municipio</li>
+            }
+        </ul>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <a asp-controller="Sitio" asp-action="Prestador" asp-route-id="@p.IdPrestador" class="jm-enlace">Ver perfil <i class="fa fa-arrow-right"></i></a>
+            @if (whatsapp != null)
+            {
+                <a href="@whatsapp" target="_blank" rel="noopener" class="jm-enlace"><i class="fab fa-whatsapp"></i>WhatsApp</a>
+            }
+        </div>
+    </div>
+</article>

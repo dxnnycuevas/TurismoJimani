@@ -8,14 +8,8 @@ public static class SitioPublico
 {
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-DO");
 
-    // Filtros del listado de destinos: (clave en la URL, nombre visible, icono de Font Awesome)
-    public static readonly (string Clave, string Nombre, string Icono)[] TiposLugar =
-    {
-        ("atractivos", "Atractivos", "fa-mountain"),
-        ("alojamientos", "Alojamientos", "fa-hotel"),
-        ("restaurantes", "Restaurantes", "fa-utensils"),
-        ("transporte", "Transporte", "fa-bus")
-    };
+    // Secciones de "Servicios" en el sitio: (grupo, nombre visible, icono de Font Awesome)
+    public static IEnumerable<(string Clave, string Nombre, string Icono)> GruposServicio => GruposPrestador.Todos;
 
     // ---------- Imágenes y créditos ----------
 
@@ -38,12 +32,7 @@ public static class SitioPublico
     public static string Credito(Imagen imagen) => Credito(imagen.Autor, imagen.Licencia);
 
     // Tipo de ilustración que sustituye a la foto cuando no hay imágenes registradas
-    public static string Ilustracion(Lugar lugar) =>
-        lugar.Atractivo != null ? "atractivo"
-        : lugar.Alojamiento != null ? "alojamiento"
-        : lugar.Restaurante != null ? "restaurante"
-        : lugar.Transporte != null ? "transporte"
-        : "lugar";
+    public static string Ilustracion(Lugar lugar) => lugar.Atractivo != null ? "atractivo" : "lugar";
 
     // Devuelve la URL solo si es http(s) o una ruta del propio sitio; si no, null
     public static string? UrlSegura(string? url)
@@ -59,20 +48,11 @@ public static class SitioPublico
 
     // ---------- Lugares ----------
 
-    // Tipo visible del lugar según la tabla de detalle que tenga asociada
+    // Tipo visible del lugar (los lugares son sitios turísticos; los negocios son prestadores)
     public static string Tipo(Lugar lugar) =>
-        lugar.Atractivo != null ? lugar.Atractivo.TipoAtractivo ?? "Atractivo"
-        : lugar.Alojamiento != null ? lugar.Alojamiento.TipoAlojamiento ?? "Alojamiento"
-        : lugar.Restaurante != null ? lugar.Restaurante.TipoComida ?? "Restaurante"
-        : lugar.Transporte != null ? lugar.Transporte.TipoTransporte
-        : "Lugar de interés";
+        lugar.Atractivo != null ? lugar.Atractivo.TipoAtractivo ?? "Atractivo" : "Lugar de interés";
 
-    public static string Icono(Lugar lugar) =>
-        lugar.Atractivo != null ? "fa-mountain"
-        : lugar.Alojamiento != null ? "fa-hotel"
-        : lugar.Restaurante != null ? "fa-utensils"
-        : lugar.Transporte != null ? "fa-bus"
-        : "fa-map-marker-alt";
+    public static string Icono(Lugar lugar) => lugar.Atractivo != null ? "fa-mountain" : "fa-map-marker-alt";
 
     public static string Ubicacion(Lugar lugar) =>
         string.Join(", ", new[] { lugar.Municipio, lugar.Provincia }.Where(p => !string.IsNullOrWhiteSpace(p)));
@@ -88,6 +68,64 @@ public static class SitioPublico
 
     public static string Precio(decimal? valor) =>
         valor.HasValue ? "RD$ " + valor.Value.ToString("#,##0", Cultura) : "";
+
+    // ---------- Prestadores de servicios ----------
+
+    public static IEnumerable<Imagen> ImagenesOrdenadas(Prestador prestador) => prestador.Imagenes
+        .Where(i => UrlSegura(i.UrlImagen) != null)
+        .OrderByDescending(i => i.EsPrincipal)
+        .ThenBy(i => i.OrdenVisualizacion);
+
+    public static Imagen? ImagenPrincipal(Prestador prestador) => ImagenesOrdenadas(prestador).FirstOrDefault();
+
+    // Icono del tipo de servicio (el propio o el de su grupo)
+    public static string IconoTipo(TipoPrestador? tipo) =>
+        !string.IsNullOrWhiteSpace(tipo?.Icono) ? tipo!.Icono! : GruposPrestador.Icono(tipo?.Grupo);
+
+    public static string EsPersonaTexto(Prestador prestador) =>
+        prestador.TipoPrestador?.Clase == ClasesPrestador.Establecimiento ? "Establecimiento" : "Persona";
+
+    // Ilustración cuando el prestador no tiene fotos
+    public static string Ilustracion(Prestador prestador) => prestador.TipoPrestador?.Grupo switch
+    {
+        GruposPrestador.Alojamiento => "alojamiento",
+        GruposPrestador.Gastronomia => "restaurante",
+        GruposPrestador.Transporte => "transporte",
+        GruposPrestador.Guia => "atractivo",
+        _ => "lugar"
+    };
+
+    public static string Ubicacion(Prestador prestador) =>
+        string.Join(", ", new[] { prestador.Municipio, prestador.Provincia }.Where(p => !string.IsNullOrWhiteSpace(p)));
+
+    // "RD$ 1,500 – RD$ 3,000", "Desde RD$ 500" o vacío
+    public static string RangoPrecio(decimal? desde, decimal? hasta) => (desde, hasta) switch
+    {
+        ({ } d, { } h) when d == h => Precio(d),
+        ({ } d, { } h) => $"{Precio(d)} – {Precio(h)}",
+        ({ } d, null) => "Desde " + Precio(d),
+        (null, { } h) => "Hasta " + Precio(h),
+        _ => ""
+    };
+
+    // Enlace de WhatsApp (wa.me). Los números dominicanos de 10 dígitos llevan el código 1.
+    public static string? EnlaceWhatsApp(string? numero, string? mensaje = null)
+    {
+        var digitos = new string((numero ?? "").Where(char.IsDigit).ToArray());
+        if (digitos.Length < 7) return null;
+        if (digitos.Length == 10 && (digitos.StartsWith("809") || digitos.StartsWith("829") || digitos.StartsWith("849")))
+            digitos = "1" + digitos;
+
+        var enlace = "https://wa.me/" + digitos;
+        return string.IsNullOrWhiteSpace(mensaje) ? enlace : enlace + "?text=" + Uri.EscapeDataString(mensaje);
+    }
+
+    // Enlace "tel:" solo con dígitos y el signo +
+    public static string? EnlaceTelefono(string? numero)
+    {
+        var limpio = new string((numero ?? "").Where(c => char.IsDigit(c) || c == '+').ToArray());
+        return limpio.Length >= 7 ? "tel:" + limpio : null;
+    }
 
     // ---------- Eventos ----------
 
