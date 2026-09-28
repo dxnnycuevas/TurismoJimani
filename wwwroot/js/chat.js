@@ -40,6 +40,94 @@
 
         mensajes.append(burbuja);
         mensajes.scrollTop = mensajes.scrollHeight;
+        return burbuja;
+    }
+
+    // Solo se usan enlaces del propio sitio, https, WhatsApp o teléfono
+    function enlaceSeguro(url) {
+        if (typeof url !== "string") return null;
+        if (url.startsWith("/") && !url.startsWith("//")) return url;
+        if (url.startsWith("https://") || url.startsWith("tel:")) return url;
+        return null;
+    }
+
+    function crear(etiqueta, clase, texto) {
+        const elemento = document.createElement(etiqueta);
+        if (clase) elemento.className = clase;
+        if (texto) elemento.textContent = texto;
+        return elemento;
+    }
+
+    function icono(clases) {
+        const i = crear("i", clases);
+        i.setAttribute("aria-hidden", "true");
+        return i;
+    }
+
+    function crearBoton(url, clase, claseIcono, texto) {
+        const a = crear("a", "chat-ficha__boton " + clase);
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.append(icono(claseIcono), document.createTextNode(" " + texto));
+        return a;
+    }
+
+    // Una ficha por registro: foto de perfil, nombre, tipo, estado y botones de contacto y perfil
+    function crearFicha(resultado) {
+        const url = enlaceSeguro(resultado.url);
+        const ficha = crear("article", "chat-ficha");
+
+        const foto = crear(url ? "a" : "div", "chat-ficha__foto");
+        if (url) {
+            foto.href = url;
+            foto.target = "_blank";
+            foto.rel = "noopener";
+            foto.setAttribute("aria-label", "Ver perfil de " + resultado.nombre);
+        }
+        const imagen = enlaceSeguro(resultado.imagen);
+        if (imagen) {
+            const img = crear("img");
+            img.src = imagen;
+            img.alt = "";
+            img.loading = "lazy";
+            foto.append(img);
+        } else {
+            foto.append(icono("fa " + (/^fa-[a-z0-9-]+$/.test(resultado.icono ?? "") ? resultado.icono : "fa-concierge-bell")));
+        }
+        if (resultado.numero) foto.append(crear("span", "chat-ficha__numero", String(resultado.numero)));
+
+        const cuerpo = crear("div", "chat-ficha__cuerpo");
+        const estado = crear("span", "chat-ficha__estado " + (resultado.activo ? "activo" : "inactivo"),
+            resultado.activo ? "Activo" : "No disponible");
+        cuerpo.append(estado, crear("h4", "chat-ficha__nombre", resultado.nombre));
+        if (resultado.subtitulo) cuerpo.append(crear("div", "chat-ficha__tipo", resultado.subtitulo));
+
+        const acciones = crear("div", "chat-ficha__acciones");
+        const whatsapp = enlaceSeguro(resultado.whatsApp);
+        const telefono = enlaceSeguro(resultado.telefono);
+        if (whatsapp) acciones.append(crearBoton(whatsapp, "chat-ficha__boton--whatsapp", "fab fa-whatsapp", "Contactar"));
+        else if (telefono) acciones.append(crearBoton(telefono, "chat-ficha__boton--whatsapp", "fa fa-phone-alt", "Llamar"));
+        if (url) acciones.append(crearBoton(url, "chat-ficha__boton--perfil", "fa fa-id-card", resultado.tipo === "Prestador" ? "Ver perfil" : "Ver ficha"));
+        cuerpo.append(acciones);
+
+        ficha.append(foto, cuerpo);
+        return ficha;
+    }
+
+    function agregarFichas(resultados) {
+        const conFicha = (resultados ?? []).filter(r => enlaceSeguro(r.url));
+        if (conFicha.length === 0) return;
+
+        const contenedor = crear("div", "chat-fichas");
+        contenedor.setAttribute("role", "list");
+        conFicha.forEach(r => {
+            const ficha = crearFicha(r);
+            ficha.setAttribute("role", "listitem");
+            contenedor.append(ficha);
+        });
+        mensajes.append(contenedor);
+        mensajes.scrollTop = mensajes.scrollHeight;
     }
 
     function procesando(activo) {
@@ -93,7 +181,10 @@
                     ? `Intención detectada: ${datos.intencion} (${Math.round(datos.confianza * 100)}%)`
                     : null;
                 const esError = ["ErrorIA", "ErrorBD", "Error"].includes(datos.tipoRespuesta);
-                agregarMensaje("Asistente", datos.respuesta, detalle, esError);
+                const hayFichas = (datos.resultados ?? []).some(r => enlaceSeguro(r.url));
+                // Con fichas se muestra el texto breve; el detalle de cada registro va en su ficha
+                agregarMensaje("Asistente", hayFichas && datos.textoCorto ? datos.textoCorto : datos.respuesta, detalle, esError);
+                agregarFichas(datos.resultados);
                 if (datos.tipoRespuesta === "ErrorIA") comprobarServicio();
             }
         } catch {

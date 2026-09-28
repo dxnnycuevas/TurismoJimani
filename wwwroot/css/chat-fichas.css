@@ -1,0 +1,140 @@
+/* Fichas de resultados del chat del asistente (sitio público y panel).
+   Se desplazan en horizontal debajo del mensaje del asistente. */
+.chat-fichas {
+    display: flex;
+    gap: .75rem;
+    overflow-x: auto;
+    padding: .25rem .25rem .75rem;
+    margin: -.25rem 0 .75rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chat-ficha {
+    flex: 0 0 200px;
+    display: flex;
+    flex-direction: column;
+    scroll-snap-align: start;
+    background: #fff;
+    border: 1px solid rgba(59, 35, 20, .1);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 16px -10px rgba(59, 35, 20, .35);
+}
+
+.chat-ficha__foto {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    background: linear-gradient(135deg, var(--naranja-100, #ffe2c2), var(--azul-50, #eaf3f9));
+    color: var(--naranja-600, #c2561a);
+    font-size: 2.4rem;
+    text-decoration: none;
+}
+
+.chat-ficha__foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chat-ficha__numero {
+    position: absolute;
+    top: .5rem;
+    left: .5rem;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    padding: 0 .4rem;
+    border-radius: 999px;
+    background: var(--azul-900, #002d62);
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1.6rem;
+    text-align: center;
+}
+
+.chat-ficha__cuerpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: .15rem;
+    padding: .65rem .75rem .75rem;
+}
+
+.chat-ficha__estado {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.chat-ficha__estado::before {
+    content: "";
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.chat-ficha__estado.activo { color: #1e7e46; }
+.chat-ficha__estado.inactivo { color: #8a8a8a; }
+
+.chat-ficha__nombre {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--texto, #2e2118);
+    overflow-wrap: anywhere;
+}
+
+.chat-ficha__tipo {
+    font-size: .8rem;
+    color: var(--texto-suave, #6b5646);
+}
+
+.chat-ficha__acciones {
+    display: grid;
+    gap: .35rem;
+    margin-top: auto;
+    padding-top: .55rem;
+}
+
+.chat-ficha__boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+    padding: .4rem .6rem;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: filter .15s ease;
+}
+
+.chat-ficha__boton:hover,
+.chat-ficha__boton:focus-visible { filter: brightness(.92); }
+
+.chat-ficha__boton--whatsapp {
+    background: #1f8a4c;   /* verde con contraste AA sobre blanco */
+    color: #fff;
+}
+
+.chat-ficha__boton--perfil {
+    border: 1px solid var(--azul-600, #1d5a8c);
+    color: var(--azul-600, #1d5a8c);
+    background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-fichas { scroll-behavior: auto; }
+    .chat-ficha__boton { transition: none; }
+}
