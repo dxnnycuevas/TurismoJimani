@@ -12,3 +12,5 @@ __pycache__/
 # Fotos subidas desde el panel
 wwwroot/uploads/
 ServicioBert/modelo_*/
+
+ServicioBert/modelo_anterior/model.safetensors
