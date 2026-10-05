@@ -759,6 +759,42 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("Servicios");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.TarifaViaje", b =>
+                {
+                    b.Property<int>("IdTarifa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdTarifa"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("HorasViaje")
+                        .HasColumnType("decimal(4,1)");
+
+                    b.Property<string>("Medio")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Nota")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("PrecioIda")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("IdTarifa");
+
+                    b.ToTable("TarifasViaje");
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.TipoPrestador", b =>
                 {
                     b.Property<int>("IdTipoPrestador")

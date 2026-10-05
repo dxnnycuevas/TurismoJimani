@@ -29,6 +29,7 @@ namespace AppDonnyCuevas20210074.Data
         public DbSet<ConsultaAsistente> ConsultasAsistente => Set<ConsultaAsistente>();
         public DbSet<Evento> Eventos => Set<Evento>();
         public DbSet<DatoCurioso> DatosCuriosos => Set<DatoCurioso>();
+        public DbSet<TarifaViaje> TarifasViaje => Set<TarifaViaje>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

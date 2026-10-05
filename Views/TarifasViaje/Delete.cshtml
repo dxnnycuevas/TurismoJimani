@@ -1,0 +1,28 @@
+@model TarifaViaje
+@{
+    ViewData["Title"] = "Eliminar tarifa de viaje";
+}
+
+<h2>Eliminar tarifa de viaje</h2>
+<hr />
+
+<div class="alert alert-danger">¿Está seguro de que desea eliminar esta tarifa? Si solo quiere dejar de usarla, edítela y desmarque «Activa».</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Ciudad de salida</dt>
+            <dd class="col-sm-8">@Model.Origen</dd>
+            <dt class="col-sm-4">Medio</dt>
+            <dd class="col-sm-8">@Model.Medio</dd>
+            <dt class="col-sm-4">Precio de ida</dt>
+            <dd class="col-sm-8">@SitioPublico.Precio(Model.PrecioIda)</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.IdTarifa" />
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

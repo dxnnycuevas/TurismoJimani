@@ -22,6 +22,9 @@ public class RespuestaChat
     public Guid IdSesion { get; set; }
     public long? IdConsulta { get; set; }
     public List<ResultadoChat> Resultados { get; set; } = new();
+
+    // Respuestas rápidas que el chat muestra como botones ("Más barato", "Menos noches"...)
+    public List<string> Sugerencias { get; set; } = new();
 }
 
 // Registro de SQL Server mencionado en la respuesta. Los que tienen Url se muestran en el chat

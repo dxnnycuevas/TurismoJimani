@@ -1,0 +1,56 @@
+@model TarifaViaje
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="Origen" class="form-label">Ciudad de salida</label>
+        <input asp-for="Origen" class="form-control" placeholder="Ej.: Santo Domingo" list="ciudades-comunes" />
+        <datalist id="ciudades-comunes">
+            <option value="Santo Domingo"></option>
+            <option value="Santiago"></option>
+            <option value="Barahona"></option>
+            <option value="San Juan de la Maguana"></option>
+            <option value="Azua"></option>
+        </datalist>
+        <span asp-validation-for="Origen" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Medio" class="form-label">Medio de transporte</label>
+        <input asp-for="Medio" class="form-control" list="medios-comunes" />
+        <datalist id="medios-comunes">
+            <option value="Guagua"></option>
+            <option value="Autobús"></option>
+            <option value="Carro público"></option>
+            <option value="Carro propio (combustible)"></option>
+        </datalist>
+        <span asp-validation-for="Medio" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="PrecioIda" class="form-label">Precio de ida (RD$)</label>
+        <input asp-for="PrecioIda" class="form-control" type="number" step="0.01" min="1" />
+        <div class="form-text">El asistente lo multiplica por 2 (ida y vuelta).</div>
+        <span asp-validation-for="PrecioIda" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="HorasViaje" class="form-label">Horas de viaje (aprox.)</label>
+        <input asp-for="HorasViaje" class="form-control" type="number" step="0.5" min="0" />
+        <span asp-validation-for="HorasViaje" class="text-danger small"></span>
+    </div>
+
+    <div class="col-md-12">
+        <label asp-for="Nota" class="form-label">Nota</label>
+        <input asp-for="Nota" class="form-control" placeholder="Ej.: sale de la parada de la avenida Duarte a las 6:00 a. m." />
+        <span asp-validation-for="Nota" class="text-danger small"></span>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="Activo" class="form-check-input" />
+            <label asp-for="Activo" class="form-check-label">Activa (la usa el asistente)</label>
+        </div>
+    </div>
+</div>

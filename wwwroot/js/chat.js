@@ -115,6 +115,27 @@
         return ficha;
     }
 
+    // Respuestas rápidas ("Más barato", "Menos noches"...): al tocar una se envía como mensaje
+    function agregarSugerencias(sugerencias) {
+        mensajes.querySelectorAll(".chat-sugeridas").forEach((s) => s.remove());
+        if (!Array.isArray(sugerencias) || sugerencias.length === 0) return;
+
+        const contenedor = crear("div", "chat-sugeridas");
+        sugerencias.forEach((texto) => {
+            const b = crear("button", "chat-sugerida", texto);
+            b.type = "button";
+            b.addEventListener("click", () => {
+                if (entrada.disabled) return;
+                contenedor.remove();
+                entrada.value = texto;
+                formulario.requestSubmit();
+            });
+            contenedor.append(b);
+        });
+        mensajes.append(contenedor);
+        mensajes.scrollTop = mensajes.scrollHeight;
+    }
+
     function agregarFichas(resultados) {
         const conFicha = (resultados ?? []).filter(r => enlaceSeguro(r.url));
         if (conFicha.length === 0) return;
@@ -185,6 +206,7 @@
                 // Con fichas se muestra el texto breve; el detalle de cada registro va en su ficha
                 agregarMensaje("Asistente", hayFichas && datos.textoCorto ? datos.textoCorto : datos.respuesta, detalle, esError);
                 agregarFichas(datos.resultados);
+                agregarSugerencias(datos.sugerencias);
                 if (datos.tipoRespuesta === "ErrorIA") comprobarServicio();
             }
         } catch {

@@ -576,6 +576,37 @@
       ]
     },
     {
+      "nombre": "PlanificarViaje",
+      "descripcion": "El usuario quiere un presupuesto o plan de viaje según el dinero y los días que tiene.",
+      "ejemplos": [
+        "buenos días, tengo 10000 pesos para pasar 5 días, ¿cómo puedo gastarlo allá?",
+        "tengo 10 mil pesos para 3 días",
+        "¿qué me alcanza con 8000 pesos?",
+        "quiero un presupuesto para mi viaje",
+        "tengo 15000 para una semana en Jimaní",
+        "¿cuánto me cuesta pasar un fin de semana allá?",
+        "¿me alcanza con 5000 pesos para 2 noches?",
+        "ayúdame a planificar mi viaje",
+        "arma un plan de viaje con mi dinero",
+        "tengo RD$ 20,000, ¿cuántos días puedo quedarme?",
+        "presupuesto para 4 noches",
+        "¿cuánto dinero necesito para ir 3 días?",
+        "quiero ir con 7000 pesos, ¿qué puedo hacer?",
+        "¿cómo distribuyo 12 mil pesos en el viaje?",
+        "voy con poco dinero, ¿qué me recomiendas?",
+        "planifica mi viaje de 5 noches",
+        "¿cuánto gasto en total si voy una semana?",
+        "tengo 9000 pesos para un fin de semana",
+        "¿qué plan me sale con 6 mil?",
+        "calcula mi presupuesto",
+        "¿cuánto cuesta un viaje de 3 días a Jimaní?",
+        "con 10000 pesos qué hago allá",
+        "quiero gastar 25000 en 7 días",
+        "dime cómo gastar mi dinero en el viaje",
+        "mi presupuesto es de 11 mil pesos"
+      ]
+    },
+    {
       "nombre": "Saludo",
       "descripcion": "El usuario saluda.",
       "ejemplos": [

@@ -134,6 +134,30 @@
     background: transparent;
 }
 
+/* Respuestas rápidas del asistente */
+.chat-sugeridas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin: -.25rem 0 .75rem;
+}
+
+.chat-sugerida {
+    padding: .4rem .9rem;
+    border: 1px solid var(--azul-600, #1d5a8c);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--azul-600, #1d5a8c);
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.chat-sugerida:hover,
+.chat-sugerida:focus-visible {
+    background: var(--azul-600, #1d5a8c);
+    color: #fff;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .chat-fichas { scroll-behavior: auto; }
     .chat-ficha__boton { transition: none; }

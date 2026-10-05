@@ -247,4 +247,134 @@ public static partial class TextoChat
         var corte = texto.LastIndexOf(' ', maximo);
         return texto[..(corte > maximo / 2 ? corte : maximo)] + "…";
     }
+
+    // ---------- Planificador de viaje ----------
+
+    private static readonly Dictionary<string, int> NumerosEnLetras = new()
+    {
+        ["un"] = 1, ["una"] = 1, ["uno"] = 1, ["dos"] = 2, ["tres"] = 3, ["cuatro"] = 4, ["cinco"] = 5,
+        ["seis"] = 6, ["siete"] = 7, ["ocho"] = 8, ["nueve"] = 9, ["diez"] = 10, ["once"] = 11,
+        ["doce"] = 12, ["quince"] = 15, ["veinte"] = 20, ["treinta"] = 30, ["cuarenta"] = 40,
+        ["cincuenta"] = 50, ["cien"] = 100
+    };
+
+    private const string Numeros = "un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|treinta|cuarenta|cincuenta|cien";
+
+    // "5 días", "tres noches", "una semana" (con límites de palabra: "algún día" no cuenta)
+    [GeneratedRegex(@"\b(\d{1,3}|" + Numeros + @")\s*(dias?|noches?|semanas?)\b")]
+    private static partial Regex Duracion();
+
+    // "10,000", "10000", "1.5 mil", "10 mil", "8k" (el grupo 2 son decimales; el 3, la unidad)
+    [GeneratedRegex(@"(?<!\d|\d[.,])(\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,](\d{1,2}))?(?!\d|[.,]\d)\s*(mil\b|k\b|lucas?\b)?")]
+    private static partial Regex Cantidad();
+
+    // "diez mil pesos", "quince mil"
+    [GeneratedRegex(@"\b(" + Numeros + @")\s+mil\b")]
+    private static partial Regex CantidadEnLetras();
+
+    // Minúsculas y sin tildes, pero conservando cifras, comas, puntos y signos ("RD$ 10,000" -> "rd$ 10,000")
+    private static string SinTildes(string texto)
+    {
+        var descompuesto = texto.ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        return new string(descompuesto.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray());
+    }
+
+    // Lee del mensaje el dinero disponible y la duración del viaje (se toma 1 día = 1 noche):
+    // "tengo 10000 pesos para pasar 5 días" -> (10000, 5); "diez mil para una semana" -> (10000, 7)
+    public static (decimal? Monto, int? Noches) DatosDeViaje(string mensaje)
+    {
+        var texto = SinTildes(mensaje);
+
+        int? noches = null;
+        var duracion = Duracion().Match(texto);
+        if (duracion.Success)
+        {
+            var valor = int.TryParse(duracion.Groups[1].Value, out var n) ? n : NumerosEnLetras[duracion.Groups[1].Value];
+            if (duracion.Groups[2].Value.StartsWith("semana")) valor *= 7;
+            if (valor is >= 1 and <= 60) noches = valor;
+        }
+        else if (texto.Contains("fin de semana"))
+        {
+            noches = 2;
+        }
+
+        decimal? monto = null;
+        void Considerar(decimal valor)
+        {
+            if (valor >= 100 && (monto is null || valor > monto)) monto = valor;
+        }
+
+        foreach (Match m in Cantidad().Matches(texto))
+        {
+            // El número de la duración no es dinero
+            if (duracion.Success && m.Index >= duracion.Index && m.Index < duracion.Index + duracion.Length)
+                continue;
+
+            var entero = Regex.Replace(m.Groups[1].Value, "[.,]", "");
+            if (!decimal.TryParse(entero, NumberStyles.None, CultureInfo.InvariantCulture, out var valor))
+                continue;
+
+            if (m.Groups[3].Success)
+            {
+                // "1.5 mil" -> 1500
+                if (m.Groups[2].Success)
+                    valor += decimal.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) / (decimal)Math.Pow(10, m.Groups[2].Value.Length);
+                valor *= 1000;
+            }
+            else if (EsUnAnio(texto, m, valor))
+            {
+                continue;   // "eventos en 2026" no es dinero
+            }
+
+            Considerar(valor);
+        }
+
+        foreach (Match m in CantidadEnLetras().Matches(texto))
+            Considerar(NumerosEnLetras[m.Groups[1].Value] * 1000m);
+
+        return (monto, noches);
+    }
+
+    // Un número de 4 cifras entre 1900 y 2100, sin separadores ni "pesos"/"RD$" cerca, se toma como año
+    private static bool EsUnAnio(string texto, Match m, decimal valor)
+    {
+        if (valor < 1900 || valor > 2100 || m.Groups[1].Value.Length != 4 || m.Groups[2].Success)
+            return false;
+
+        var antes = texto[Math.Max(0, m.Index - 4)..m.Index];
+        var despues = texto[(m.Index + m.Length)..].TrimStart();
+        return !antes.Contains('$') && !antes.Contains("rd") && !despues.StartsWith("peso") && !despues.StartsWith("rd");
+    }
+
+    // "Tengo 10 mil pesos para 5 días", "¿qué me alcanza con 8000?". Un monto solo no basta:
+    // "hoteles de menos de 2000 pesos" es una búsqueda de hoteles, no un plan.
+    public static bool EsPresupuesto(string mensaje)
+    {
+        var (monto, noches) = DatosDeViaje(mensaje);
+        if (monto is null) return false;
+
+        var texto = Normalizar(mensaje);
+        return noches is not null || texto.Contains("presupuesto") || texto.Contains("gastar") || texto.Contains("alcanza")
+               || texto.Contains("planific") || Tokens(texto).Contains("tengo") || Tokens(texto).Contains("viaje");
+    }
+
+    public static bool PideMenosNoches(string normalizado) =>
+        normalizado.Contains("menos noche") || normalizado.Contains("menos dia") || normalizado.Contains("menos tiempo")
+        || normalizado.Contains("reducir") || normalizado.Contains("acortar");
+
+    // Respuesta a "¿desde dónde viajas?": "salgo de Higüey", "vengo desde La Romana" o solo el nombre ("Higüey")
+    public static bool PareceUnOrigen(string mensaje, string normalizado)
+    {
+        var tokens = Tokens(normalizado);
+        if (tokens.Any(t => t is "salgo" or "sale" or "desde" or "vengo" or "vivo" or "voy") || normalizado.Contains("soy de"))
+            return true;
+
+        return tokens.Length is > 0 and <= 3 && !mensaje.Contains('?');
+    }
+
+    // "Ya estoy en Jimaní", "sin pasaje", "voy en mi carro": el presupuesto se calcula sin pasaje
+    public static bool SinPasaje(string normalizado) =>
+        normalizado.Contains("sin pasaje") || normalizado.Contains("estoy en jimani") || normalizado.Contains("vivo en jimani")
+        || normalizado.Contains("ya estoy") || normalizado.Contains("carro propio") || normalizado.Contains("mi carro")
+        || normalizado.Contains("mi vehiculo") || normalizado.Contains("no necesito pasaje");
 }

@@ -40,6 +40,9 @@ public class ContextoConversacion
     // true si lo último que se mostró fue un detalle (no una lista)
     public bool EnfoqueReciente { get; set; }
 
+    // Plan de viaje en curso ("tengo 10000 pesos para 5 días"): se completa en varios mensajes
+    public PlanViaje? Plan { get; set; }
+
     public void RecordarLista(Dominio dominio, IEnumerable<RefFicha> fichas)
     {
         Dominio = dominio;
@@ -62,4 +65,17 @@ public class ContextoConversacion
         Dominio = Asistente.Dominio.Ruta;
         UltimasRutas = idsRutas.ToList();
     }
+}
+
+// Datos del planificador de presupuesto. Si falta alguno, el asistente lo pregunta.
+public class PlanViaje
+{
+    public decimal? Monto { get; set; }
+    public int? Noches { get; set; }
+    public string? Origen { get; set; }
+
+    // "normal" o "barato" (las opciones más económicas de cada grupo)
+    public string Modo { get; set; } = "normal";
+
+    public bool Completo => Monto.HasValue && Noches.HasValue && Origen != null;
 }

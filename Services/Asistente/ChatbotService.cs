@@ -29,6 +29,7 @@ public static class NombresIntencion
     public const string Agradecimiento = "Agradecimiento";
     public const string Ayuda = "Ayuda";
     public const string FueraDeAlcance = "FueraDeAlcance";
+    public const string PlanificarViaje = "PlanificarViaje";
 }
 
 public static class TiposRespuesta
@@ -136,6 +137,14 @@ public class ChatbotService
 
     private async Task ResolverAsync(ConsultaChat c, RespuestaChat r, CancellationToken ct)
     {
+        // Planificador de presupuesto ("tengo 10000 pesos para 5 días") y sus respuestas de seguimiento
+        if (await ResolverPlanAsync(c, r, ct))
+        {
+            r.Intencion = NombresIntencion.PlanificarViaje;
+            c.Contexto.UltimaIntencion = NombresIntencion.PlanificarViaje;
+            return;
+        }
+
         var fichas = await CargarFichasAsync(ct);
         var mencionada = TextoChat.BuscarPorNombre(c.Normalizado, fichas, f => f.Nombre);
         var intencion = c.Intencion;
@@ -244,6 +253,200 @@ public class ChatbotService
         }
 
         c.Contexto.UltimaIntencion = intencion;
+    }
+
+    // ------------------------------------------------------------------ planificador de presupuesto
+
+    private const string OpcionSinPasaje = "Ya estoy en Jimaní";
+
+    // Devuelve true si el mensaje pertenece al plan de viaje (nuevo o en curso) y ya se respondió
+    private async Task<bool> ResolverPlanAsync(ConsultaChat c, RespuestaChat r, CancellationToken ct)
+    {
+        var ctx = c.Contexto;
+        var esNuevo = c.Intencion == NombresIntencion.PlanificarViaje || TextoChat.EsPresupuesto(c.Mensaje)
+                      || c.Normalizado.Contains("presupuesto") || c.Normalizado.Contains("planific");
+        var planEnCurso = ctx.Plan is not null && ctx.UltimaIntencion == NombresIntencion.PlanificarViaje;
+
+        // Solo se consulta la base de datos si el mensaje tiene que ver con un plan de viaje
+        if (!esNuevo && !planEnCurso)
+        {
+            ctx.Plan = null;
+            return false;
+        }
+
+        var (monto, noches) = TextoChat.DatosDeViaje(c.Mensaje);
+        var origenes = await OrigenesAsync(ct);
+        var sinPasaje = TextoChat.SinPasaje(c.Normalizado);
+        var origen = sinPasaje ? "" : origenes.Count > 0 ? TextoChat.BuscarPorNombre(c.Normalizado, origenes, o => o) : null;
+
+        if (planEnCurso)
+        {
+            // Seguimiento: completar lo que faltaba o ajustar el plan ("¿y si tengo 8000?", "4 noches", "Más barato")
+            var plan = ctx.Plan!;
+            var cambio = false;
+            if (monto is not null && monto != plan.Monto) { plan.Monto = monto; plan.Modo = "normal"; cambio = true; }
+            if (noches is not null && noches != plan.Noches) { plan.Noches = noches; cambio = true; }
+            if (origen is not null && origen != plan.Origen) { plan.Origen = origen; cambio = true; }
+
+            if (!cambio && plan.Completo)
+            {
+                if (TextoChat.PideMasBarato(c.Normalizado)) { plan.Modo = "barato"; cambio = true; }
+                else if (TextoChat.PideMenosNoches(c.Normalizado))
+                {
+                    var alcanza = await NochesQueAlcanzanAsync(plan, ct);
+                    plan.Noches = alcanza is > 0 && alcanza < plan.Noches ? alcanza : Math.Max(1, plan.Noches!.Value - 1);
+                    cambio = true;
+                }
+            }
+
+            // Se le preguntó desde dónde viaja y respondió con una ciudad que no está registrada
+            // ("salgo de Higüey", "Higüey"): BERT puede clasificarlo como otra cosa, por eso se mira la forma de la respuesta
+            if (!cambio && plan.Monto.HasValue && plan.Noches.HasValue && plan.Origen is null
+                && (c.Confianza < _umbralConfianza
+                    || c.Intencion is NombresIntencion.FueraDeAlcance or NombresIntencion.PlanificarViaje
+                    || TextoChat.PareceUnOrigen(c.Mensaje, c.Normalizado)))
+            {
+                Responder(r, TiposRespuesta.Aclaracion,
+                    $"Todavía no tengo el precio del pasaje desde ese lugar. Tengo tarifas desde: {string.Join(", ", origenes)}. " +
+                    "¿Desde cuál sales? Si ya estás en Jimaní o vas en tu propio vehículo, calculo el plan sin pasaje.");
+                r.Sugerencias.AddRange(origenes.Take(5).Append(OpcionSinPasaje));
+                return true;
+            }
+
+            if (!cambio && !esNuevo)
+            {
+                ctx.Plan = null;   // cambió de tema
+                return false;
+            }
+        }
+        else
+        {
+            ctx.Plan = new PlanViaje { Monto = monto, Noches = noches, Origen = origen };
+        }
+
+        var actual = ctx.Plan!;
+
+        // Si no hay tarifas de pasaje registradas, se calcula sin pasaje
+        if (actual.Origen is null && origenes.Count == 0)
+            actual.Origen = "";
+
+        if (!actual.Monto.HasValue)
+        {
+            Responder(r, TiposRespuesta.Aclaracion, "¡Con gusto te ayudo a planificar el viaje! ¿Cuánto dinero tienes para gastar? Por ejemplo: «10,000 pesos».");
+            return true;
+        }
+        if (!actual.Noches.HasValue)
+        {
+            Responder(r, TiposRespuesta.Aclaracion, $"Perfecto, RD$ {TextoNumero(actual.Monto.Value)}. ¿Cuántas noches vas a pasar en Jimaní?");
+            r.Sugerencias.AddRange(new[] { "2 noches", "3 noches", "5 noches" });
+            return true;
+        }
+        if (actual.Origen is null)
+        {
+            Responder(r, TiposRespuesta.Aclaracion, "¿Desde dónde viajas? Así calculo también el pasaje de ida y vuelta.");
+            r.Sugerencias.AddRange(origenes.Take(5).Append(OpcionSinPasaje));
+            return true;
+        }
+
+        await ResponderPlanAsync(c, r, actual, ct);
+        return true;
+    }
+
+    // Ciudades con pasaje registrado; primero las que tienen más opciones (suelen ser las más comunes)
+    private async Task<List<string>> OrigenesAsync(CancellationToken ct) =>
+        await _context.TarifasViaje.AsNoTracking()
+            .Where(t => t.Activo)
+            .GroupBy(t => t.Origen)
+            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+            .Select(g => g.Key)
+            .ToListAsync(ct);
+
+    // El procedimiento almacenado arma el presupuesto (pasaje, hospedaje, comida y transporte local)
+    private Task<List<LineaPresupuesto>> PresupuestoAsync(PlanViaje plan, int noches, CancellationToken ct) =>
+        _context.Database
+            .SqlQuery<LineaPresupuesto>($"EXEC dbo.sp_PresupuestoViaje @Noches = {noches}, @Origen = {plan.Origen ?? ""}, @Modo = {plan.Modo}")
+            .ToListAsync(ct);
+
+    // Cuántas noches cubre el dinero con las opciones del modo actual
+    private async Task<int?> NochesQueAlcanzanAsync(PlanViaje plan, CancellationToken ct)
+    {
+        var unaNoche = await PresupuestoAsync(plan, 1, ct);
+        var fijo = unaNoche.Where(l => l.IdPrestador == null).Sum(l => l.Subtotal);
+        var porNoche = unaNoche.Where(l => l.IdPrestador != null).Sum(l => l.Subtotal);
+        if (porNoche <= 0 || !plan.Monto.HasValue) return null;
+        return (int)Math.Floor((plan.Monto.Value - fijo) / porNoche);
+    }
+
+    private async Task ResponderPlanAsync(ConsultaChat c, RespuestaChat r, PlanViaje plan, CancellationToken ct)
+    {
+        var noches = plan.Noches!.Value;
+        var monto = plan.Monto!.Value;
+        var lineas = await PresupuestoAsync(plan, noches, ct);
+
+        if (lineas.Count == 0)
+        {
+            Responder(r, TiposRespuesta.SinResultados,
+                "Todavía no tengo precios registrados de hospedaje, comida o transporte para armar el presupuesto.");
+            c.Contexto.Plan = null;
+            return;
+        }
+
+        var total = lineas.Sum(l => l.Subtotal);
+        var diferencia = monto - total;
+        var desde = string.IsNullOrEmpty(plan.Origen) ? " (sin pasaje)" : $" saliendo de {plan.Origen}";
+        var duracion = noches == 1 ? "1 día (1 noche)" : $"{noches} días ({noches} noches)";
+        var economico = plan.Modo == "barato" ? ", con las opciones más económicas" : "";
+
+        var texto = new StringBuilder($"Para {duracion}{desde} con RD$ {TextoNumero(monto)}{economico}:\n");
+        foreach (var l in lineas)
+            texto.Append($"• {l.Concepto} – {l.Opcion}: RD$ {TextoNumero(l.Subtotal)}\n");
+
+        var faltantes = new List<string>();
+        if (!string.IsNullOrEmpty(plan.Origen) && lineas.All(l => l.Orden != 1)) faltantes.Add("el pasaje");
+        if (lineas.All(l => l.Orden != 2)) faltantes.Add("el hospedaje");
+        if (lineas.All(l => l.Orden != 3)) faltantes.Add("la comida");
+        if (faltantes.Count > 0)
+            texto.Append($"(No tengo precios registrados para {string.Join(" ni ", faltantes)}.)\n");
+
+        texto.Append($"\nTotal: RD$ {TextoNumero(total)}");
+
+        if (diferencia >= 0)
+        {
+            texto.Append($" → te sobran RD$ {TextoNumero(diferencia)} para excursiones, guías y recuerdos. ¡Buen viaje!");
+            r.Sugerencias.AddRange(new[] { "¿Hay guías turísticos?", "¿Qué lugares puedo visitar?" });
+        }
+        else
+        {
+            texto.Append($" → te faltan RD$ {TextoNumero(-diferencia)}.");
+            var alcanza = await NochesQueAlcanzanAsync(plan, ct);
+            var opciones = new List<string>();
+
+            if (plan.Modo != "barato")
+            {
+                opciones.Add("escoger las opciones más económicas («Más barato»)");
+                r.Sugerencias.Add("Más barato");
+            }
+            if (alcanza is > 0 && alcanza < noches)
+            {
+                opciones.Add($"quedarte {alcanza} {(alcanza == 1 ? "noche" : "noches")} («Menos noches»)");
+                r.Sugerencias.Add("Menos noches");
+            }
+
+            texto.Append(opciones.Count > 0
+                ? $" Puedo {string.Join(" o ", opciones)}."
+                : " Con los precios registrados no alcanza ni para una noche; prueba con otro monto.");
+        }
+
+        // Fichas de los prestadores sugeridos (con su botón de contacto)
+        var ids = lineas.Where(l => l.IdPrestador != null).Select(l => l.IdPrestador!.Value).ToList();
+        var prestadores = await Proyectar(PrestadoresActivos().Where(p => ids.Contains(p.IdPrestador))).ToListAsync(ct);
+        r.Resultados.AddRange(ids
+            .Select(id => prestadores.FirstOrDefault(p => p.Id == id))
+            .Where(p => p != null)
+            .Select(p => Tarjeta(ElementoPrestador(p!, true))));
+
+        r.TipoRespuesta = TiposRespuesta.Datos;
+        r.Respuesta = texto.ToString();
     }
 
     // ------------------------------------------------------------------ búsquedas de prestadores
