@@ -7,13 +7,14 @@
     }
 
     ViewData["Title"] = esPublico ? "Asistente virtual" : "Asistente turístico";
-    ViewData["Subtitulo"] = "Pregunta por atractivos, alojamientos, dónde comer, transporte, guías, otros servicios y rutas en Jimaní, a cualquier hora.";
+    ViewData["Subtitulo"] = "Pregunta por atractivos, alojamientos, dónde comer, transporte, guías, otros servicios, rutas y eventos en Jimaní, a cualquier hora.";
     var sugerencias = new[]
     {
         "¿Qué lugares puedo visitar?",
         "¿Dónde puedo hospedarme?",
         "¿Dónde puedo comer?",
-        "¿Cómo llego al Lago Enriquillo?"
+        "¿Qué eventos hay?",
+        "¿Cómo llego a Las Caritas de los Indios?"
     };
 }
 
@@ -34,7 +35,14 @@
                                 <svg class="jm-simbolo-icono" style="width:1.8em;height:1.8em;color:var(--naranja-300)" aria-hidden="true"><use href="#t-carita" /></svg>
                                 Asistente de Turismo Jimaní
                             </span>
-                            <span id="chat-servicio" class="small">Comprobando el servicio…</span>
+                            <span class="d-flex align-items-center gap-3">
+                                <span id="chat-servicio" class="small">Comprobando el servicio…</span>
+                                @* Agranda el chat a casi toda la pantalla (Esc o el mismo botón lo devuelven a su tamaño) *@
+                                <button type="button" id="chat-agrandar" class="chat-agrandar" aria-pressed="false"
+                                        aria-label="Agrandar el chat" title="Agrandar el chat">
+                                    <i class="fa fa-expand" aria-hidden="true"></i>
+                                </button>
+                            </span>
                         </div>
 
                         <div id="chat-mensajes" class="chat-mensajes p-4" aria-live="polite"></div>

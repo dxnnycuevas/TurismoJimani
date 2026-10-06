@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "Estado de BERT";
+}
+
+<div class="tablero-saludo d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1>Estado de BERT</h1>
+        <p>Servicio de inteligencia artificial que clasifica las preguntas del chat. Se actualiza cada 5 segundos.</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <span id="bert-conexion" class="bert-conexion" role="status">
+            <i class="fa fa-circle-notch fa-spin" aria-hidden="true"></i><span>Comprobando…</span>
+        </span>
+        <button type="button" id="bert-pausar" class="btn btn-sm btn-outline-secondary">
+            <i class="fa fa-pause me-1" aria-hidden="true"></i><span>Pausar</span>
+        </button>
+    </div>
+</div>
+
+<div id="bert-sin-conexion" class="alert alert-warning" hidden>
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>
+    No se pudo conectar con el servicio BERT. Inícielo con <code>ServicioBert\iniciar.bat</code>; esta página se conectará sola cuando responda.
+</div>
+
+<!-- Indicadores -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono" aria-hidden="true"><i class="fa fa-memory"></i></span>
+            <div class="flex-grow-1">
+                <div class="indicador__etiqueta">Memoria de BERT</div>
+                <div class="indicador__valor" id="bert-memoria">—</div>
+                <div class="medidor my-2" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Memoria del equipo que usa BERT" id="bert-medidor-proceso">
+                    <div class="medidor__relleno" style="width:0%"></div>
+                </div>
+                <div class="indicador__detalle" id="bert-memoria-detalle">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--violeta" aria-hidden="true"><i class="fa fa-brain"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Modelo en memoria</div>
+                <div class="indicador__valor" id="bert-modelo">—</div>
+                <div class="indicador__detalle" id="bert-modelo-detalle">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--naranja" aria-hidden="true"><i class="fa fa-microchip"></i></span>
+            <div>
+                <div class="indicador__etiqueta">CPU de BERT</div>
+                <div class="indicador__valor" id="bert-cpu">—</div>
+                <div class="indicador__detalle" id="bert-cpu-detalle">—</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="indicador">
+            <span class="indicador__icono indicador__icono--verde" aria-hidden="true"><i class="fa fa-clock"></i></span>
+            <div>
+                <div class="indicador__etiqueta">Encendido</div>
+                <div class="indicador__valor" id="bert-encendido">—</div>
+                <div class="indicador__detalle" id="bert-encendido-detalle">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Memoria en el tiempo -->
+    <div class="col-xl-8">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo">Memoria que usa BERT</h2>
+                    <p class="grafico-tarjeta__subtitulo">MB en uso · últimos 5 minutos (desde que abrió esta página)</p>
+                </div>
+                <button type="button" class="grafico-tarjeta__alternar" data-alternar="memoria" aria-expanded="false">Ver tabla</button>
+            </div>
+            <div class="card-body pt-0">
+                <div class="grafico-lienzo" data-vista="grafico" data-grafico="memoria">
+                    <canvas id="grafico-memoria" role="img" aria-label="Memoria del servicio BERT en el tiempo; el detalle está en la vista de tabla"></canvas>
+                </div>
+                <div class="grafico-tabla" data-vista="tabla" data-grafico="memoria" hidden>
+                    <table class="table table-sm">
+                        <thead><tr><th>Hora</th><th>Memoria (MB)</th></tr></thead>
+                        <tbody id="bert-tabla-memoria"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memoria del equipo -->
+    <div class="col-xl-4">
+        <div class="card grafico-tarjeta">
+            <div class="card-header">
+                <div>
+                    <h2 class="grafico-tarjeta__titulo">Memoria del equipo</h2>
+                    <p class="grafico-tarjeta__subtitulo">Toda la RAM de esta computadora</p>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex align-items-baseline justify-content-between mb-2">
+                    <span class="indicador__valor" id="equipo-porcentaje">—</span>
+                    <span class="indicador__detalle">en uso</span>
+                </div>
+                <div class="medidor mb-2" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Memoria del equipo en uso" id="equipo-medidor">
+                    <div class="medidor__relleno" style="width:0%"></div>
+                </div>
+                <p class="small mb-3" id="equipo-aviso" hidden>
+                    <i class="fa fa-exclamation-triangle estado--aviso" aria-hidden="true"></i>
+                    La memoria del equipo está casi llena: el chat puede responder más lento.
+                </p>
+                <ul class="estado-lista">
+                    <li><i class="fa fa-hdd fa-fw text-secondary" aria-hidden="true"></i>Total<span class="valor" id="equipo-total">—</span></li>
+                    <li><i class="fa fa-chart-bar fa-fw text-secondary" aria-hidden="true"></i>En uso<span class="valor" id="equipo-uso">—</span></li>
+                    <li><i class="fa fa-check-circle fa-fw estado--bien" aria-hidden="true"></i>Disponible<span class="valor" id="equipo-disponible">—</span></li>
+                    <li><i class="fa fa-robot fa-fw text-secondary" aria-hidden="true"></i>Usada por BERT<span class="valor" id="equipo-bert">—</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header py-3"><h2 class="grafico-tarjeta__titulo">Modelo cargado</h2></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Modelo base</dt><dd class="col-sm-7" id="modelo-base">—</dd>
+                    <dt class="col-sm-5">Entrenado</dt><dd class="col-sm-7" id="modelo-entrenado">—</dd>
+                    <dt class="col-sm-5">Exactitud en validación</dt><dd class="col-sm-7" id="modelo-exactitud">—</dd>
+                    <dt class="col-sm-5">Intenciones</dt><dd class="col-sm-7" id="modelo-intenciones">—</dd>
+                    <dt class="col-sm-5">Carpeta</dt><dd class="col-sm-7" id="modelo-carpeta">—</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header py-3"><h2 class="grafico-tarjeta__titulo">Actividad</h2></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-5">Preguntas clasificadas</dt><dd class="col-sm-7" id="act-predicciones">—</dd>
+                    <dt class="col-sm-5">Tiempo promedio</dt><dd class="col-sm-7" id="act-promedio">—</dd>
+                    <dt class="col-sm-5">Última pregunta</dt><dd class="col-sm-7" id="act-ultima">—</dd>
+                    <dt class="col-sm-5">Versiones</dt><dd class="col-sm-7" id="act-versiones">—</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script id="estado-bert" src="~/js/estado-bert.js" asp-append-version="true"
+            data-url="@Url.Action("Datos", "EstadoBert")"></script>
+}

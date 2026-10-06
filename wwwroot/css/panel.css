@@ -622,3 +622,16 @@ body.panel {
     .acceso-rapido { transition: none; }
     .acceso-rapido:hover { transform: none; }
 }
+
+/* Estado de BERT: indicador de conexión (icono + texto, nunca solo color) */
+.bert-conexion {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .3rem .8rem;
+    border: 1px solid var(--panel-borde);
+    border-radius: 999px;
+    background: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+}

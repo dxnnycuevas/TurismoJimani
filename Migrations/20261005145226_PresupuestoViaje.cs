@@ -46,13 +46,17 @@ GROUP BY t.Grupo;");
 
             // Presupuesto de un viaje a Jimaní: pasaje de ida y vuelta, hospedaje por noche,
             // 3 comidas y 2 viajes de transporte local por día.
-            // @Modo = 'normal' elige la opción de precio más cercano al promedio de su grupo;
-            // @Modo = 'barato' elige la opción más económica de cada grupo.
+            // Se prueban todas las combinaciones de hospedaje, comida y transporte:
+            // @Modo = 'normal' elige la combinación más cercana a los precios promedio de cada grupo;
+            // @Modo = 'barato' elige la combinación más económica.
+            // Con @Monto solo se aceptan las combinaciones que caben en ese dinero; si ninguna cabe,
+            // se devuelve la más económica (el asistente avisa cuánto falta).
             migrationBuilder.Sql(@"
 CREATE OR ALTER PROCEDURE dbo.sp_PresupuestoViaje
     @Noches INT,
     @Origen NVARCHAR(100),
-    @Modo   NVARCHAR(10) = N'normal'
+    @Modo   NVARCHAR(10) = N'normal',
+    @Monto  DECIMAL(12, 2) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -74,37 +78,64 @@ BEGIN
     WHERE Activo = 1 AND Origen = @Origen
     ORDER BY PrecioIda;
 
-    -- Una opción por grupo: hospedaje, comida y transporte local
+    DECLARE @Pasaje DECIMAL(12, 2) = ISNULL((SELECT SUM(Subtotal) FROM @Lineas), 0);
+
+    -- Cuántas veces se paga cada grupo durante el viaje
+    DECLARE @Grupos TABLE (Grupo NVARCHAR(50), Orden INT, Cantidad INT);
+    INSERT INTO @Grupos VALUES (N'Alojamiento', 2, @Noches),
+                               (N'Gastronomia', 3, @Noches * 3),
+                               (N'Transporte',  4, @Noches * 2);
+
+    DECLARE @IdHospedaje INT, @IdComida INT, @IdTransporte INT;
+
     WITH Opciones AS (
-        SELECT p.IdPrestador, p.Nombre, t.Grupo, p.PrecioDesde AS Precio,
-               ROW_NUMBER() OVER (
-                   PARTITION BY t.Grupo
-                   ORDER BY CASE WHEN @Modo = N'barato' THEN p.PrecioDesde
-                                 ELSE ABS(p.PrecioDesde - v.PrecioPromedio) END,
-                            p.Destacado DESC,
-                            p.PrecioDesde) AS Puesto
+        -- Una opción por precio en cada grupo (la destacada) para no repetir combinaciones iguales
+        SELECT p.IdPrestador, t.Grupo, p.PrecioDesde AS Precio, CAST(p.Destacado AS INT) AS Destacado,
+               ABS(p.PrecioDesde - v.PrecioPromedio) AS Desvio,
+               ROW_NUMBER() OVER (PARTITION BY t.Grupo, p.PrecioDesde
+                                  ORDER BY p.Destacado DESC, p.IdPrestador) AS Repetida
         FROM dbo.Prestadores p
         JOIN dbo.TiposPrestador t ON t.IdTipoPrestador = p.IdTipoPrestador
         JOIN dbo.vw_PreciosPorGrupo v ON v.Grupo = t.Grupo
         WHERE p.Activo = 1
           AND p.PrecioDesde IS NOT NULL
           AND t.Grupo IN (N'Alojamiento', N'Gastronomia', N'Transporte')
+    ),
+    PorGrupo AS (
+        -- Un grupo sin precios queda como fila vacía para no perder las demás combinaciones
+        SELECT g.Grupo, g.Cantidad, o.IdPrestador, o.Precio, o.Destacado, o.Desvio
+        FROM @Grupos g
+        LEFT JOIN Opciones o ON o.Grupo = g.Grupo AND o.Repetida = 1
+    ),
+    Combinaciones AS (
+        SELECT h.IdPrestador AS IdHospedaje, c.IdPrestador AS IdComida, t.IdPrestador AS IdTransporte,
+               @Pasaje + ISNULL(h.Precio * h.Cantidad, 0) + ISNULL(c.Precio * c.Cantidad, 0)
+                       + ISNULL(t.Precio * t.Cantidad, 0) AS Total,
+               ISNULL(h.Desvio * h.Cantidad, 0) + ISNULL(c.Desvio * c.Cantidad, 0)
+                       + ISNULL(t.Desvio * t.Cantidad, 0) AS Desvio,
+               ISNULL(h.Destacado, 0) + ISNULL(c.Destacado, 0) + ISNULL(t.Destacado, 0) AS Destacados
+        FROM PorGrupo h
+        CROSS JOIN PorGrupo c
+        CROSS JOIN PorGrupo t
+        WHERE h.Grupo = N'Alojamiento' AND c.Grupo = N'Gastronomia' AND t.Grupo = N'Transporte'
     )
+    SELECT TOP 1 @IdHospedaje = IdHospedaje, @IdComida = IdComida, @IdTransporte = IdTransporte
+    FROM Combinaciones
+    ORDER BY CASE WHEN @Monto IS NULL OR Total <= @Monto THEN 0 ELSE 1 END,
+             CASE WHEN @Modo = N'barato' OR Total > @Monto THEN Total ELSE Desvio END,
+             Destacados DESC,
+             Total;
+
     INSERT INTO @Lineas
-    SELECT CASE Grupo WHEN N'Alojamiento' THEN 2 WHEN N'Gastronomia' THEN 3 ELSE 4 END,
-           CASE Grupo WHEN N'Alojamiento' THEN N'Hospedaje (' + CAST(@Noches AS NVARCHAR(5)) + CASE WHEN @Noches = 1 THEN N' noche)' ELSE N' noches)' END
-                      WHEN N'Gastronomia' THEN N'Comida (3 comidas al día)'
-                      ELSE N'Transporte local (2 viajes al día)' END,
-           Nombre, IdPrestador, Precio,
-           Cantidad,
-           Precio * Cantidad
-    FROM (
-        SELECT *, CASE Grupo WHEN N'Alojamiento' THEN @Noches
-                             WHEN N'Gastronomia' THEN @Noches * 3
-                             ELSE @Noches * 2 END AS Cantidad
-        FROM Opciones
-        WHERE Puesto = 1
-    ) o;
+    SELECT g.Orden,
+           CASE g.Grupo WHEN N'Alojamiento' THEN N'Hospedaje (' + CAST(@Noches AS NVARCHAR(5)) + CASE WHEN @Noches = 1 THEN N' noche)' ELSE N' noches)' END
+                        WHEN N'Gastronomia' THEN N'Comida (3 comidas al día)'
+                        ELSE N'Transporte local (2 viajes al día)' END,
+           p.Nombre, p.IdPrestador, p.PrecioDesde, g.Cantidad, p.PrecioDesde * g.Cantidad
+    FROM dbo.Prestadores p
+    JOIN dbo.TiposPrestador t ON t.IdTipoPrestador = p.IdTipoPrestador
+    JOIN @Grupos g ON g.Grupo = t.Grupo
+    WHERE p.IdPrestador IN (@IdHospedaje, @IdComida, @IdTransporte);
 
     SELECT Orden, Concepto, Opcion, IdPrestador, PrecioUnitario, Cantidad, Subtotal
     FROM @Lineas

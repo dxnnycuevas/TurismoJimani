@@ -1186,6 +1186,74 @@ svg.jm-ilustracion { display: block; width: 100%; height: 100%; }
     color: #fff;
 }
 
+/* Botón para agrandar el chat */
+.chat-agrandar {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid rgba(255, 255, 255, .4);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    transition: background-color .15s ease;
+}
+
+.chat-agrandar:hover,
+.chat-agrandar:focus-visible { background: rgba(255, 255, 255, .3); }
+
+/* Chat agrandado: el mismo diseño, casi a pantalla completa y sobre un fondo oscurecido */
+.chat-caja--grande {
+    position: fixed;
+    inset: 1rem;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--arena);   /* el vidrio deja ver el fondo oscuro; aquí se mantiene claro */
+    box-shadow: 0 30px 80px -20px rgba(0, 27, 61, .6);
+}
+
+.chat-caja--grande .chat-mensajes {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+}
+
+/* Las preguntas sugeridas pasan a una sola fila deslizable para dejar más espacio a la conversación */
+.chat-caja--grande .chat-sugerencias {
+    flex-wrap: nowrap !important;   /* Bootstrap: .flex-wrap */
+    overflow-x: auto;
+    padding-bottom: .25rem;
+    scrollbar-width: thin;
+}
+
+.chat-caja--grande .chat-sugerencias .jm-chip { flex: 0 0 auto; }
+
+.chat-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 1070;
+    background: rgba(0, 27, 61, .55);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+
+body.chat-grande-abierto { overflow: hidden; }
+
+/* El contenedor de la sección tiene z-index propio (2): mientras el chat está agrandado se sube
+   por encima de la barra del sitio y del botón "subir" */
+.container:has(.chat-caja--grande) { z-index: 1080; }
+
+@media (max-width: 575.98px) {
+    .chat-caja--grande { inset: 0; border-radius: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-agrandar { transition: none; }
+}
+
 .chat-caja .chat-error { border-color: var(--rojo); }
 .chat-caja .chat-autor { font-weight: 700; font-size: .78rem; opacity: .8; }
 .chat-caja .chat-texto { white-space: pre-line; overflow-wrap: anywhere; }

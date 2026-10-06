@@ -8,6 +8,9 @@ public interface IClasificadorIntenciones
 {
     Task<ResultadoIntencion> ClasificarAsync(string texto, CancellationToken ct = default);
     Task<bool> EstaDisponibleAsync(CancellationToken ct = default);
+
+    // JSON de GET /estado del servicio (memoria, CPU y actividad); null si el servicio no responde
+    Task<string?> ObtenerEstadoJsonAsync(CancellationToken ct = default);
 }
 
 // Error al comunicarse con el servicio BERT (caído, lento o respuesta no válida)
@@ -74,6 +77,21 @@ public class ClasificadorBert : IClasificadorIntenciones
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             return false;
+        }
+    }
+
+    public async Task<string?> ObtenerEstadoJsonAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            limite.CancelAfter(TimeSpan.FromSeconds(3));
+            using var respuesta = await _http.GetAsync("estado", limite.Token);
+            return respuesta.IsSuccessStatusCode ? await respuesta.Content.ReadAsStringAsync(limite.Token) : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return null;
         }
     }
 

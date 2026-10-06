@@ -98,8 +98,9 @@
         if (resultado.numero) foto.append(crear("span", "chat-ficha__numero", String(resultado.numero)));
 
         const cuerpo = crear("div", "chat-ficha__cuerpo");
+        const esEvento = resultado.tipo === "Evento";
         const estado = crear("span", "chat-ficha__estado " + (resultado.activo ? "activo" : "inactivo"),
-            resultado.activo ? "Activo" : "No disponible");
+            esEvento ? "Evento" : resultado.activo ? "Activo" : "No disponible");
         cuerpo.append(estado, crear("h4", "chat-ficha__nombre", resultado.nombre));
         if (resultado.subtitulo) cuerpo.append(crear("div", "chat-ficha__tipo", resultado.subtitulo));
 
@@ -108,7 +109,10 @@
         const telefono = enlaceSeguro(resultado.telefono);
         if (whatsapp) acciones.append(crearBoton(whatsapp, "chat-ficha__boton--whatsapp", "fab fa-whatsapp", "Contactar"));
         else if (telefono) acciones.append(crearBoton(telefono, "chat-ficha__boton--whatsapp", "fa fa-phone-alt", "Llamar"));
-        if (url) acciones.append(crearBoton(url, "chat-ficha__boton--perfil", "fa fa-id-card", resultado.tipo === "Prestador" ? "Ver perfil" : "Ver ficha"));
+        if (url) {
+            const textoBoton = esEvento ? "Ver evento" : resultado.tipo === "Prestador" ? "Ver perfil" : "Ver ficha";
+            acciones.append(crearBoton(url, "chat-ficha__boton--perfil", esEvento ? "fa fa-calendar-alt" : "fa fa-id-card", textoBoton));
+        }
         cuerpo.append(acciones);
 
         ficha.append(foto, cuerpo);
@@ -133,6 +137,240 @@
             contenedor.append(b);
         });
         mensajes.append(contenedor);
+        mensajes.scrollTop = mensajes.scrollHeight;
+    }
+
+    // ---------- Tarjeta del planificador de presupuesto ----------
+
+    const formatoDinero = new Intl.NumberFormat("es-DO", { maximumFractionDigits: 0 });
+    const dinero = (valor) => "RD$ " + formatoDinero.format(valor);
+
+    const partesPresupuesto = {
+        pasaje: { icono: "fa-bus", nombre: "Pasaje" },
+        hospedaje: { icono: "fa-bed", nombre: "Hospedaje" },
+        comida: { icono: "fa-utensils", nombre: "Comida" },
+        transporte: { icono: "fa-taxi", nombre: "Transporte local" }
+    };
+
+    function chip(claseIcono, texto) {
+        const c = crear("span", "chat-presupuesto__chip");
+        c.append(icono("fa " + claseIcono), document.createTextNode(" " + texto));
+        return c;
+    }
+
+    // Barra que reparte el dinero: un tramo por parte del viaje, lo que sobra en verde
+    // y, si no alcanza, una marca donde se acaba el presupuesto y el exceso rayado en rojo
+    function crearBarra(p) {
+        const base = Math.max(p.total, p.monto) || 1;
+        const porcentaje = (valor) => (valor / base * 100).toFixed(2) + "%";
+
+        const barra = crear("div", "chat-presupuesto__barra");
+        barra.setAttribute("role", "img");
+        barra.setAttribute("aria-label", `Plan de ${dinero(p.total)} con un presupuesto de ${dinero(p.monto)}`);
+
+        const pista = crear("div", "chat-presupuesto__pista");
+        const tramos = p.lineas.map((l) => ({ clase: l.clase, valor: l.subtotal, titulo: `${partesPresupuesto[l.clase]?.nombre ?? l.concepto}: ${dinero(l.subtotal)}` }));
+        if (p.cabe && p.monto > p.total) tramos.push({ clase: "sobra", valor: p.monto - p.total, titulo: `Te sobran ${dinero(p.monto - p.total)}` });
+
+        tramos.forEach((t) => {
+            const tramo = crear("span", "chat-presupuesto__tramo chat-presupuesto__tramo--" + t.clase);
+            tramo.title = t.titulo;
+            tramo.style.setProperty("--ancho", porcentaje(t.valor));
+            pista.append(tramo);
+        });
+        barra.append(pista);
+
+        if (!p.cabe) {
+            const exceso = crear("span", "chat-presupuesto__exceso");
+            exceso.style.left = porcentaje(p.monto);
+            pista.append(exceso);
+
+            const limite = crear("span", "chat-presupuesto__limite");
+            limite.style.left = porcentaje(p.monto);
+            limite.title = "Tu presupuesto: " + dinero(p.monto);
+            barra.append(limite);
+        }
+
+        // Los tramos crecen al aparecer (el CSS lo desactiva con movimiento reducido)
+        requestAnimationFrame(() => requestAnimationFrame(() => barra.classList.add("chat-presupuesto__barra--lista")));
+        return barra;
+    }
+
+    function crearLineaPresupuesto(l) {
+        const parte = partesPresupuesto[l.clase] ?? partesPresupuesto.transporte;
+        const fila = crear("li", "chat-presupuesto__linea chat-presupuesto__linea--" + l.clase);
+
+        const marca = crear("span", "chat-presupuesto__icono");
+        marca.append(icono("fa " + parte.icono));
+
+        const texto = crear("div", "chat-presupuesto__descripcion");
+        texto.append(crear("span", "chat-presupuesto__concepto", l.concepto));
+        const url = enlaceSeguro(l.url);
+        if (url) {
+            const enlace = crear("a", "chat-presupuesto__opcion", l.opcion);
+            enlace.href = url;
+            enlace.target = "_blank";
+            enlace.rel = "noopener";
+            texto.append(enlace);
+        } else {
+            texto.append(crear("span", "chat-presupuesto__opcion", l.opcion));
+        }
+        texto.append(crear("span", "chat-presupuesto__detalle", l.detalle));
+
+        fila.append(marca, texto, crear("span", "chat-presupuesto__subtotal", dinero(l.subtotal)));
+        return fila;
+    }
+
+    function agregarPresupuesto(p) {
+        if (!p || !Array.isArray(p.lineas) || p.lineas.length === 0) return;
+
+        const tarjeta = crear("article", "chat-presupuesto " + (p.cabe ? "chat-presupuesto--cabe" : "chat-presupuesto--falta"));
+
+        const cabecera = crear("header", "chat-presupuesto__cabecera");
+        const titulo = crear("h4", "chat-presupuesto__titulo");
+        titulo.append(icono("fa fa-suitcase-rolling"), document.createTextNode(" Tu plan de viaje"));
+        const chips = crear("div", "chat-presupuesto__chips");
+        chips.append(
+            chip("fa-moon", p.noches === 1 ? "1 noche" : p.noches + " noches"),
+            chip("fa-map-marker-alt", p.origen ? "Desde " + p.origen : "Sin pasaje"),
+            chip("fa-wallet", dinero(p.monto)));
+        if (p.economico || p.ajustado) chips.append(chip("fa-piggy-bank", p.economico ? "Lo más económico" : "Ajustado a tu dinero"));
+        cabecera.append(titulo, chips);
+
+        const uso = crear("div", "chat-presupuesto__uso");
+        uso.append(
+            crear("span", null, (p.cabe ? "Usas " : "Necesitas ") + dinero(p.total)),
+            crear("span", null, (p.cabe ? "de " : "tienes ") + dinero(p.monto)));
+
+        const lineas = crear("ul", "chat-presupuesto__lineas");
+        p.lineas.forEach((l) => lineas.append(crearLineaPresupuesto(l)));
+
+        const total = crear("div", "chat-presupuesto__total");
+        total.append(crear("span", null, "Total del viaje"), crear("strong", null, dinero(p.total)));
+
+        const diferencia = Math.abs(p.monto - p.total);
+        const resultado = crear("div", "chat-presupuesto__resultado");
+        resultado.append(
+            icono("fa " + (p.cabe ? "fa-check-circle" : "fa-exclamation-triangle")),
+            crear("span", null, !p.cabe ? `Te faltan ${dinero(diferencia)} para este plan.`
+                : diferencia < 1 ? "Usas justo todo tu presupuesto."
+                : `Te sobran ${dinero(diferencia)} para excursiones, guías y recuerdos.`));
+
+        tarjeta.append(cabecera, crearBarra(p), uso, lineas, total, resultado);
+        mensajes.append(tarjeta);
+        mensajes.scrollTop = mensajes.scrollHeight;
+    }
+
+    // ---------- Tarjeta de detalle (ruta, evento, lugar, prestador, ubicación, dato curioso) ----------
+
+    const accionesDetalle = {
+        ficha: "fa fa-id-card",
+        whatsapp: "fab fa-whatsapp",
+        telefono: "fa fa-phone-alt",
+        mapa: "fa fa-map-marked-alt",
+        enlace: "fa fa-external-link-alt"
+    };
+
+    const iconoValido = (nombre, otro) => "fa " + (/^fa-[a-z0-9-]+$/.test(nombre ?? "") ? nombre : otro);
+
+    function crearParada(nombre, clase) {
+        const parada = crear("div", "chat-tarjeta__parada chat-tarjeta__parada--" + clase);
+        parada.append(crear("span", "chat-tarjeta__punto"), crear("span", "chat-tarjeta__lugar", nombre));
+        return parada;
+    }
+
+    function agregarDetalle(d) {
+        if (!d || !d.titulo) return;
+        const clase = /^[a-z]+$/.test(d.clase ?? "") ? d.clase : "lugar";
+        const tarjeta = crear("article", "chat-tarjeta chat-tarjeta--" + clase);
+
+        // Cabecera: foto con el título encima, o banda de color con el icono (o el calendario de un evento)
+        const imagen = enlaceSeguro(d.imagen);
+        const cabecera = crear("header", "chat-tarjeta__cabecera" + (imagen ? " chat-tarjeta__cabecera--foto" : ""));
+        if (imagen) {
+            const img = crear("img", "chat-tarjeta__foto");
+            img.src = imagen;
+            img.alt = "";
+            img.loading = "lazy";
+            cabecera.append(img);
+        }
+        if (d.fecha) {
+            const calendario = crear("div", "chat-tarjeta__calendario");
+            calendario.setAttribute("aria-hidden", "true");
+            calendario.append(crear("span", "chat-tarjeta__semana", d.fecha.diaSemana), crear("strong", null, d.fecha.dia), crear("span", null, d.fecha.mes));
+            cabecera.append(calendario);
+        } else {
+            const marca = crear("span", "chat-tarjeta__icono");
+            marca.append(icono(iconoValido(d.icono, "fa-info-circle")));
+            cabecera.append(marca);
+        }
+        const titulos = crear("div", "chat-tarjeta__titulos");
+        if (d.subtitulo) titulos.append(crear("span", "chat-tarjeta__subtitulo", d.subtitulo));
+        titulos.append(crear("h4", "chat-tarjeta__titulo", d.titulo));
+        cabecera.append(titulos);
+
+        const cuerpo = crear("div", "chat-tarjeta__cuerpo");
+
+        // Recorrido de una ruta: origen ●——● destino
+        if (d.origen || d.destino) {
+            const recorrido = crear("div", "chat-tarjeta__recorrido");
+            const linea = crear("div", "chat-tarjeta__linea");
+            linea.append(icono("fa fa-route"));
+            recorrido.append(crearParada(d.origen ?? "—", "origen"), linea, crearParada(d.destino ?? "—", "destino"));
+            cuerpo.append(recorrido);
+        }
+
+        if (d.resumen) cuerpo.append(crear("p", "chat-tarjeta__resumen", d.resumen));
+        (d.secciones ?? []).filter((s) => !s.titulo).forEach((s) => cuerpo.append(crear("p", "chat-tarjeta__texto", s.texto)));
+
+        if (Array.isArray(d.datos) && d.datos.length) {
+            const lista = crear("dl", "chat-tarjeta__datos");
+            d.datos.forEach((x) => {
+                const dato = crear("div", "chat-tarjeta__dato");
+                const etiqueta = crear("dt");
+                etiqueta.append(icono(iconoValido(x.icono, "fa-info-circle")), document.createTextNode(" " + x.etiqueta));
+                dato.append(etiqueta, crear("dd", null, x.valor));
+                lista.append(dato);
+            });
+            cuerpo.append(lista);
+        }
+
+        // Párrafos con título: el dato curioso siempre visible; los demás se abren al tocarlos (abiertos si son pocos)
+        const conTitulo = (d.secciones ?? []).filter((s) => s.titulo);
+        const pocas = conTitulo.filter((s) => s.titulo !== "Dato curioso").length <= 2;
+        conTitulo.forEach((s) => {
+            if (s.titulo === "Dato curioso") {
+                const caja = crear("div", "chat-tarjeta__curioso");
+                const titulo = crear("strong");
+                titulo.append(icono("fa fa-lightbulb"), document.createTextNode(" Dato curioso"));
+                caja.append(titulo, crear("p", null, s.texto));
+                cuerpo.append(caja);
+                return;
+            }
+            const seccion = crear("details", "chat-tarjeta__seccion");
+            seccion.open = pocas;
+            seccion.append(crear("summary", null, s.titulo), crear("p", null, s.texto));
+            cuerpo.append(seccion);
+        });
+
+        const acciones = crear("div", "chat-tarjeta__acciones");
+        (d.acciones ?? []).forEach((a) => {
+            const url = enlaceSeguro(a.url);
+            if (!url) return;
+            const tipo = accionesDetalle[a.tipo] ? a.tipo : "enlace";
+            const boton = crear("a", "chat-tarjeta__accion chat-tarjeta__accion--" + tipo);
+            boton.href = url;
+            if (!url.startsWith("tel:")) {
+                boton.target = "_blank";
+                boton.rel = "noopener";
+            }
+            boton.append(icono(accionesDetalle[tipo]), document.createTextNode(" " + a.texto));
+            acciones.append(boton);
+        });
+        if (acciones.childElementCount) cuerpo.append(acciones);
+
+        tarjeta.append(cabecera, cuerpo);
+        mensajes.append(tarjeta);
         mensajes.scrollTop = mensajes.scrollHeight;
     }
 
@@ -202,10 +440,13 @@
                     ? `Intención detectada: ${datos.intencion} (${Math.round(datos.confianza * 100)}%)`
                     : null;
                 const esError = ["ErrorIA", "ErrorBD", "Error"].includes(datos.tipoRespuesta);
-                const hayFichas = (datos.resultados ?? []).some(r => enlaceSeguro(r.url));
-                // Con fichas se muestra el texto breve; el detalle de cada registro va en su ficha
-                agregarMensaje("Asistente", hayFichas && datos.textoCorto ? datos.textoCorto : datos.respuesta, detalle, esError);
-                agregarFichas(datos.resultados);
+                const hayTarjetas = (datos.resultados ?? []).some(r => enlaceSeguro(r.url)) || !!datos.presupuesto || !!datos.detalle;
+                // Con tarjetas se muestra el texto breve; el resto de la información va en ellas
+                agregarMensaje("Asistente", hayTarjetas && datos.textoCorto ? datos.textoCorto : datos.respuesta, detalle, esError);
+                agregarPresupuesto(datos.presupuesto);
+                agregarDetalle(datos.detalle);
+                // La tarjeta de detalle ya trae foto y botones de contacto: no se repite la ficha
+                if (!datos.detalle) agregarFichas(datos.resultados);
                 agregarSugerencias(datos.sugerencias);
                 if (datos.tipoRespuesta === "ErrorIA") comprobarServicio();
             }
@@ -226,6 +467,42 @@
         }
     });
 
+    // Botón para agrandar el chat (sitio público): mismo diseño, casi a pantalla completa.
+    // Se reduce con el mismo botón, con Esc o tocando fuera del chat.
+    const botonAgrandar = document.getElementById("chat-agrandar");
+    const caja = formulario.closest(".chat-caja");
+    if (botonAgrandar && caja) {
+        let fondo = null;
+
+        const agrandar = (grande) => {
+            caja.classList.toggle("chat-caja--grande", grande);
+            document.body.classList.toggle("chat-grande-abierto", grande);
+
+            const texto = grande ? "Reducir el chat" : "Agrandar el chat";
+            botonAgrandar.setAttribute("aria-pressed", String(grande));
+            botonAgrandar.setAttribute("aria-label", texto);
+            botonAgrandar.title = texto;
+            botonAgrandar.querySelector("i").className = "fa " + (grande ? "fa-compress" : "fa-expand");
+
+            if (grande) {
+                fondo = crear("div", "chat-fondo");
+                fondo.addEventListener("click", () => agrandar(false));
+                caja.before(fondo);
+            } else {
+                fondo?.remove();
+                fondo = null;
+            }
+
+            mensajes.scrollTop = mensajes.scrollHeight;
+            entrada.focus();
+        };
+
+        botonAgrandar.addEventListener("click", () => agrandar(!caja.classList.contains("chat-caja--grande")));
+        document.addEventListener("keydown", (evento) => {
+            if (evento.key === "Escape" && caja.classList.contains("chat-caja--grande")) agrandar(false);
+        });
+    }
+
     // Botones de preguntas sugeridas
     document.querySelectorAll("[data-pregunta]").forEach((boton) => {
         boton.addEventListener("click", () => {
@@ -236,7 +513,7 @@
     });
 
     agregarMensaje("Asistente",
-        "¡Hola! Soy el asistente turístico de Jimaní. Pregúntame por atractivos, alojamientos, dónde comer, transporte, guías turísticos, otros servicios o rutas.");
+        "¡Hola! Soy el asistente turístico de Jimaní. Pregúntame por atractivos, alojamientos, dónde comer, transporte, guías turísticos, otros servicios, rutas o eventos. También puedo armarte un presupuesto de viaje o contarte un dato curioso.");
     comprobarServicio();
 
     // Pregunta enviada desde otra página del sitio (/Asistente?pregunta=...): se envía una sola vez

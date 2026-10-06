@@ -127,6 +127,12 @@ public static partial class TextoChat
     // Busca en el mensaje el nombre de un registro de la base de datos (lugar o ruta).
     // Prioridad: nombre completo > todas sus palabras distintivas > al menos la mitad de ellas.
     public static T? BuscarPorNombre<T>(string mensajeNormalizado, IEnumerable<T> elementos, Func<T, string> nombre)
+        where T : class =>
+        BuscarConPuntaje(mensajeNormalizado, elementos, nombre).Elemento;
+
+    // Igual que BuscarPorNombre, pero devuelve también el puntaje (0 si no se nombra ninguno)
+    // para comparar fichas, rutas y eventos que comparten palabras ("Isla Cabritos" y "Excursión a Isla Cabritos")
+    public static (T? Elemento, int Puntaje) BuscarConPuntaje<T>(string mensajeNormalizado, IEnumerable<T> elementos, Func<T, string> nombre)
         where T : class
     {
         var mensaje = " " + mensajeNormalizado + " ";
@@ -173,7 +179,7 @@ public static partial class TextoChat
             }
         }
 
-        return mejor;
+        return (mejor, mejorPuntaje);
     }
 
     // "el primero", "la segunda", "el 3", "numero 2", "el ultimo" -> índice (base 0)
@@ -234,6 +240,118 @@ public static partial class TextoChat
     public static bool PideDestacados(string normalizado) =>
         normalizado.Contains("destacad") || normalizado.Contains("principales") || normalizado.Contains("mas bonit")
         || normalizado.Contains("mejores");
+
+    // "¿Dónde queda el lago?", "¿dónde está…?", "ubicación de…": piden el lugar, no una ruta
+    public static bool PideUbicacion(string normalizado) =>
+        normalizado.Contains("donde queda") || normalizado.Contains("donde esta") || normalizado.Contains("donde se encuentra")
+        || normalizado.Contains("ubicacion") || normalizado.Contains("ubicad") || normalizado.Contains("direccion");
+
+    // "¿Cómo llego a…?": rutas que terminan en el lugar
+    public static bool PideComoLlegar(string normalizado) =>
+        normalizado.Contains("como llego") || normalizado.Contains("como llegar") || normalizado.Contains("como voy")
+        || normalizado.Contains("como ir") || normalizado.Contains("llegar a") || normalizado.Contains("camino a");
+
+    // "¿Qué rutas salen del parque?": rutas que empiezan en el lugar
+    public static bool PideSalida(string normalizado) =>
+        Tokens(normalizado).Any(t => t is "desde" or "salen" or "sale" or "salir" or "parten" or "empiezan" or "inician");
+
+    // ---------- Eventos y datos curiosos ----------
+
+    // Palabras que piden eventos aunque BERT no lo detecte: "¿qué eventos hay?", "¿hay alguna feria?", "promociones"
+    private static readonly string[] RaicesEvento =
+        { "evento", "feria", "festival", "fiesta", "concierto", "promocion", "descuento", "oferta", "carrera", "maraton", "patronal", "celebr" };
+
+    public static bool PideEventos(string normalizado) =>
+        Tokens(normalizado).Any(t => RaicesEvento.Any(t.StartsWith));
+
+    // Tipo de evento que nombra el mensaje (los mismos de Evento.Tipos)
+    private static readonly (string Raiz, string Tipo)[] TiposEvento =
+    {
+        ("promocion", "Promoción"), ("descuento", "Promoción"), ("oferta", "Promoción"),
+        ("patronal", "Fiesta patronal"), ("festival", "Festival"), ("cultural", "Actividad cultural"),
+        ("religios", "Religioso"), ("procesion", "Religioso"), ("deport", "Deportivo"), ("carrera", "Deportivo"),
+        ("maraton", "Deportivo"), ("gastronom", "Gastronómico"), ("comida", "Gastronómico")
+    };
+
+    public static string? TipoEventoPedido(string normalizado)
+    {
+        var tokens = Tokens(normalizado);
+        return TiposEvento.FirstOrDefault(x => tokens.Any(t => t.StartsWith(x.Raiz))).Tipo;
+    }
+
+    private static readonly string[] Meses =
+    {
+        "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    };
+
+    // Periodo que pide el mensaje: "hoy", "este fin de semana", "esta semana", "este mes", "el mes que viene", "en noviembre"
+    public static (DateTime Desde, DateTime Hasta, string Texto)? PeriodoPedido(string normalizado, DateTime hoy)
+    {
+        hoy = hoy.Date;
+        var tokens = Tokens(normalizado);
+
+        if (tokens.Contains("hoy"))
+            return (hoy, hoy, "hoy");
+
+        if (normalizado.Contains("fin de semana"))
+        {
+            // Sábado y domingo de esta semana (si ya es domingo, solo hoy)
+            var sabado = hoy.AddDays(((int)DayOfWeek.Saturday - (int)hoy.DayOfWeek + 7) % 7);
+            return hoy.DayOfWeek == DayOfWeek.Sunday ? (hoy, hoy, "este fin de semana") : (sabado, sabado.AddDays(1), "este fin de semana");
+        }
+
+        if (normalizado.Contains("esta semana"))
+            return (hoy, hoy.AddDays((7 - (int)hoy.DayOfWeek) % 7), "esta semana");
+
+        var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
+        if (normalizado.Contains("este mes"))
+            return (hoy, inicioMes.AddMonths(1).AddDays(-1), "este mes");
+        if (normalizado.Contains("proximo mes") || normalizado.Contains("mes que viene") || normalizado.Contains("siguiente mes"))
+            return (inicioMes.AddMonths(1), inicioMes.AddMonths(2).AddDays(-1), "el mes que viene");
+
+        for (var i = 0; i < Meses.Length; i++)
+        {
+            if (!tokens.Contains(Meses[i]) && !(i == 8 && tokens.Contains("setiembre")))
+                continue;
+
+            // Un mes que ya pasó este año se refiere al del año que viene
+            var inicio = new DateTime(hoy.Year, i + 1, 1);
+            if (inicio.AddMonths(1) <= hoy)
+                inicio = inicio.AddYears(1);
+            return (inicio < hoy ? hoy : inicio, inicio.AddMonths(1).AddDays(-1), "en " + Meses[i]);
+        }
+
+        return null;
+    }
+
+    // "Cuéntame un dato curioso", "¿sabías que…?", "otra curiosidad"
+    public static bool PideDatoCurioso(string normalizado) =>
+        normalizado.Contains("dato curioso") || normalizado.Contains("datos curiosos") || normalizado.Contains("curiosidad")
+        || normalizado.Contains("sabias que") || normalizado.Contains("algo interesante") || normalizado.Contains("dato interesante")
+        || normalizado.Contains("otro dato");
+
+    // Palabras de la pregunta que no dicen de qué tema se quiere el dato
+    private static readonly HashSet<string> PalabrasDeDato = new()
+    {
+        "dato", "datos", "curioso", "curiosos", "curiosa", "curiosidad", "curiosidades", "cuentame", "dime", "hablame",
+        "sabias", "interesante", "interesantes", "otro", "otra", "saber", "sobre", "acerca", "informacion", "porque",
+        "cuando", "quien", "tiene", "tienen", "puedes"
+    };
+
+    // Tema de la pregunta para elegir un dato: "dato curioso del lago" -> ["lago"]
+    public static List<string> PalabrasTema(string normalizado) =>
+        PalabrasClave(normalizado).Where(t => !PalabrasDeDato.Contains(t)).ToList();
+
+    // Solo las palabras que distinguen el tema ("¿qué es el larimar?" -> ["larimar"]), sin las de cualquier consulta
+    public static List<string> PalabrasDistintivas(string normalizado) =>
+        PalabrasFiltro(normalizado).Where(t => !PalabrasDeDato.Contains(t)).ToList();
+
+    // Cuántas palabras del tema aparecen, por su raíz, en un texto: "salado" ~ "saladas", "tainos" ~ "taino"
+    public static int Coincidencias(IReadOnlyCollection<string> palabras, string texto)
+    {
+        var tokens = Tokens(Normalizar(texto)).Where(t => t.Length >= 3).Distinct().ToList();
+        return palabras.Count(p => tokens.Any(t => CoincideRaiz(p, t)));
+    }
 
     public static string Recortar(string? texto, int maximo)
     {

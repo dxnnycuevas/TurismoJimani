@@ -1,3 +1,4 @@
+using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,6 +7,7 @@ using AppDonnyCuevas20210074.Data;
 using AppDonnyCuevas20210074.Helpers;
 using AppDonnyCuevas20210074.Models;
 using AppDonnyCuevas20210074.Models.Asistente;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -30,6 +32,8 @@ public static class NombresIntencion
     public const string Ayuda = "Ayuda";
     public const string FueraDeAlcance = "FueraDeAlcance";
     public const string PlanificarViaje = "PlanificarViaje";
+    public const string BuscarEvento = "BuscarEvento";
+    public const string DatoCurioso = "DatoCurioso";
 }
 
 public static class TiposRespuesta
@@ -56,7 +60,7 @@ public class ChatbotService
 
     public const string MensajeNoReconocido =
         "No estoy seguro de lo que buscas. Puedes preguntarme por atractivos, alojamientos, lugares para comer, " +
-        "transporte, guías turísticos, otros servicios o rutas.";
+        "transporte, guías turísticos, otros servicios, rutas, eventos o datos curiosos de Jimaní.";
 
     private static readonly string[] TiposFuenteLugar = { "Lugar", "Atractivo" };
     private const string TipoFuentePrestador = "Prestador";
@@ -146,17 +150,45 @@ public class ChatbotService
         }
 
         var fichas = await CargarFichasAsync(ct);
-        var mencionada = TextoChat.BuscarPorNombre(c.Normalizado, fichas, f => f.Nombre);
+        var (mencionada, puntajeFicha) = TextoChat.BuscarConPuntaje(c.Normalizado, fichas, f => f.Nombre);
         var intencion = c.Intencion;
+
+        // Eventos y rutas nombrados en el mensaje. Si se nombran con más claridad que una ficha, ganan:
+        // "¿cuándo es la Observación de flamencos?" es un evento y "¿cuánto dura la Excursión a Isla Cabritos?", una ruta
+        var eventos = await CargarEventosAsync(ct);
+        var (eventoParecido, puntajeEvento) = TextoChat.BuscarConPuntaje(c.Normalizado, eventos, e => e.Titulo);
+        var nombresRutas = await _context.Rutas.AsNoTracking().Where(x => x.Activa).Select(x => x.Nombre).ToListAsync(ct);
+        var (_, puntajeRuta) = TextoChat.BuscarConPuntaje(c.Normalizado, nombresRutas, n => n);
+
+        // "¿Hay eventos en el Lago Enriquillo?" nombra el lago, no un evento: el evento cuenta solo si se nombra con más claridad
+        var eventoMencionado = puntajeEvento > puntajeFicha && puntajeEvento > puntajeRuta ? eventoParecido : null;
 
         // Tipos de servicio registrados que nombra el mensaje ("farmacia", "colmado", "taller"...)
         var gruposMencionados = mencionada is null ? await GruposDeTiposMencionadosAsync(c, ct) : null;
 
         if (TextoChat.EsSoloReferencia(c.Normalizado) && c.Contexto.Dominio is { } dominioAnterior
-            && (c.Contexto.UltimosLugares.Count > 0 || c.Contexto.UltimasRutas.Count > 0))
+            && (c.Contexto.UltimosLugares.Count > 0 || c.Contexto.UltimasRutas.Count > 0 || c.Contexto.UltimosEventos.Count > 0))
         {
             // Seguimiento corto como "el 2" sobre la última lista mostrada
             intencion = IntencionConsultar(dominioAnterior);
+        }
+        else if (eventoMencionado is not null)
+        {
+            intencion = NombresIntencion.BuscarEvento;
+        }
+        else if (puntajeRuta >= 1000 && puntajeRuta > puntajeFicha)
+        {
+            // Nombre completo de una ruta ("Excursión a Isla Cabritos"), aunque contenga el de un lugar
+            intencion = NombresIntencion.ConsultarRuta;
+        }
+        else if (TextoChat.PideDatoCurioso(c.Normalizado))
+        {
+            intencion = NombresIntencion.DatoCurioso;
+        }
+        else if (TextoChat.PideEventos(c.Normalizado))
+        {
+            // "¿Qué eventos hay?", "¿hay alguna feria?", "promociones": BERT puede confundirlos con lugares o servicios
+            intencion = NombresIntencion.BuscarEvento;
         }
         else if (gruposMencionados is not null && !gruposMencionados.Contains(GrupoDeIntencion(intencion) ?? "")
                  && intencion is not (NombresIntencion.BuscarRuta or NombresIntencion.ConsultarRuta))
@@ -180,6 +212,19 @@ public class ChatbotService
             // "¿Cómo es Las Caritas?" o "¿quién es Raúl Pérez?": si nombra una ficha registrada, se describe
             intencion = NombresIntencion.ConsultarAtractivo;
         }
+        else if (intencion == NombresIntencion.DatoCurioso && mencionada is not null)
+        {
+            // BERT puede tomar "¿cómo es Las Caritas?", "¿quién es María Féliz?" o "¿por qué el lago es salado?" por un
+            // dato curioso: se describe la ficha (la de un lugar ya trae el dato curioso que mejor responde)
+            intencion = NombresIntencion.ConsultarAtractivo;
+        }
+        else if (intencion == NombresIntencion.BuscarEvento && eventoMencionado is null
+                 && TextoChat.PeriodoPedido(c.Normalizado, DateTime.Today) is null
+                 && (mencionada is not null || c.Contexto.EnfoqueReciente))
+        {
+            // "¿A qué hora abren?" sin palabras de evento ni fechas: se refiere a la ficha nombrada o de la que se hablaba
+            intencion = IntencionConsultar(mencionada?.Dominio ?? c.Contexto.Dominio ?? Dominio.Atractivo);
+        }
 
         r.Intencion = intencion;
 
@@ -188,7 +233,8 @@ public class ChatbotService
             case NombresIntencion.Saludo:
                 Responder(r, TiposRespuesta.Conversacional,
                     "¡Hola! Soy el asistente turístico de Jimaní. Puedo ayudarte a encontrar atractivos, alojamientos, " +
-                    "lugares para comer, transporte, guías turísticos, otros servicios y rutas. ¿Qué te gustaría saber?");
+                    "lugares para comer, transporte, guías turísticos, otros servicios, rutas y eventos, armar un presupuesto " +
+                    "para tu viaje o contarte datos curiosos. ¿Qué te gustaría saber?");
                 break;
 
             case NombresIntencion.Despedida:
@@ -245,6 +291,14 @@ public class ChatbotService
 
             case NombresIntencion.ConsultarRestaurante:
                 await ConsultarFichaAsync(c, r, fichas, mencionada, Dominio.Restaurante, ct);
+                break;
+
+            case NombresIntencion.BuscarEvento:
+                await BuscarEventosAsync(c, r, eventos, eventoMencionado, mencionada, ct);
+                break;
+
+            case NombresIntencion.DatoCurioso:
+                await ContarDatoCuriosoAsync(c, r, fichas, ct);
                 break;
 
             default: // FueraDeAlcance o una intención nueva sin lógica asociada
@@ -361,27 +415,44 @@ public class ChatbotService
             .Select(g => g.Key)
             .ToListAsync(ct);
 
-    // El procedimiento almacenado arma el presupuesto (pasaje, hospedaje, comida y transporte local)
-    private Task<List<LineaPresupuesto>> PresupuestoAsync(PlanViaje plan, int noches, CancellationToken ct) =>
-        _context.Database
-            .SqlQuery<LineaPresupuesto>($"EXEC dbo.sp_PresupuestoViaje @Noches = {noches}, @Origen = {plan.Origen ?? ""}, @Modo = {plan.Modo}")
-            .ToListAsync(ct);
+    // El procedimiento almacenado arma el presupuesto (pasaje, hospedaje, comida y transporte local).
+    // Con monto escoge la combinación que cabe en ese dinero; si ninguna cabe, la más económica.
+    private Task<List<LineaPresupuesto>> PresupuestoAsync(string? origen, int noches, string modo, decimal? monto, CancellationToken ct)
+    {
+        var parametroMonto = new SqlParameter("@Monto", SqlDbType.Decimal)
+        {
+            Precision = 12,
+            Scale = 2,
+            Value = (object?)monto ?? DBNull.Value
+        };
 
-    // Cuántas noches cubre el dinero con las opciones del modo actual
+        return _context.Database
+            .SqlQuery<LineaPresupuesto>($"EXEC dbo.sp_PresupuestoViaje @Noches = {noches}, @Origen = {origen ?? ""}, @Modo = {modo}, @Monto = {parametroMonto}")
+            .ToListAsync(ct);
+    }
+
+    // Cuántas noches cubre el dinero con las opciones más económicas
     private async Task<int?> NochesQueAlcanzanAsync(PlanViaje plan, CancellationToken ct)
     {
-        var unaNoche = await PresupuestoAsync(plan, 1, ct);
-        var fijo = unaNoche.Where(l => l.IdPrestador == null).Sum(l => l.Subtotal);
-        var porNoche = unaNoche.Where(l => l.IdPrestador != null).Sum(l => l.Subtotal);
-        if (porNoche <= 0 || !plan.Monto.HasValue) return null;
-        return (int)Math.Floor((plan.Monto.Value - fijo) / porNoche);
+        if (!plan.Monto.HasValue) return null;
+        var unaNoche = await PresupuestoAsync(plan.Origen, 1, "barato", null, ct);
+        return NochesQueAlcanzan(unaNoche, 1, plan.Monto.Value);
+    }
+
+    // El pasaje se paga una vez; lo demás, por noche
+    private static int? NochesQueAlcanzan(List<LineaPresupuesto> lineas, int noches, decimal monto)
+    {
+        var fijo = lineas.Where(l => l.IdPrestador == null).Sum(l => l.Subtotal);
+        var porNoche = lineas.Where(l => l.IdPrestador != null).Sum(l => l.Subtotal) / noches;
+        if (porNoche <= 0) return null;
+        return (int)Math.Floor((monto - fijo) / porNoche);
     }
 
     private async Task ResponderPlanAsync(ConsultaChat c, RespuestaChat r, PlanViaje plan, CancellationToken ct)
     {
         var noches = plan.Noches!.Value;
         var monto = plan.Monto!.Value;
-        var lineas = await PresupuestoAsync(plan, noches, ct);
+        var lineas = await PresupuestoAsync(plan.Origen, noches, plan.Modo, monto, ct);
 
         if (lineas.Count == 0)
         {
@@ -392,12 +463,31 @@ public class ChatbotService
         }
 
         var total = lineas.Sum(l => l.Subtotal);
-        var diferencia = monto - total;
-        var desde = string.IsNullOrEmpty(plan.Origen) ? " (sin pasaje)" : $" saliendo de {plan.Origen}";
-        var duracion = noches == 1 ? "1 día (1 noche)" : $"{noches} días ({noches} noches)";
-        var economico = plan.Modo == "barato" ? ", con las opciones más económicas" : "";
+        var cabe = total <= monto;
+        var economico = plan.Modo == "barato";
 
-        var texto = new StringBuilder($"Para {duracion}{desde} con RD$ {TextoNumero(monto)}{economico}:\n");
+        // Plan con las opciones más económicas: dice si se puede abaratar más y cuántas noches alcanzan
+        var masBarato = await PresupuestoAsync(plan.Origen, noches, "barato", null, ct);
+
+        // Si el plan habitual no cabía en el dinero, el procedimiento escogió opciones más baratas
+        var ajustado = false;
+        if (cabe && !economico)
+        {
+            var habitual = await PresupuestoAsync(plan.Origen, noches, "normal", null, ct);
+            ajustado = habitual.Sum(l => l.Subtotal) > monto;
+        }
+
+        var desde = string.IsNullOrEmpty(plan.Origen) ? " sin contar pasaje" : $" saliendo de {plan.Origen}";
+        var duracion = noches == 1 ? "1 día (1 noche)" : $"{noches} días ({noches} noches)";
+        var dinero = $"RD$ {TextoNumero(monto)}";
+
+        var introduccion =
+            !cabe ? $"Con {dinero} no alcanza para {duracion}{desde}, ni con las opciones más económicas. Este es el plan más barato:"
+            : ajustado ? $"¡Sí te alcanza! Escogí opciones más económicas para que el viaje de {duracion}{desde} quepa en tus {dinero}:"
+            : economico ? $"Este es el plan más económico para {duracion}{desde} con {dinero}:"
+            : $"¡Te alcanza! Este es tu plan para {duracion}{desde} con {dinero}:";
+
+        var texto = new StringBuilder(introduccion).Append('\n');
         foreach (var l in lineas)
             texto.Append($"• {l.Concepto} – {l.Opcion}: RD$ {TextoNumero(l.Subtotal)}\n");
 
@@ -405,37 +495,56 @@ public class ChatbotService
         if (!string.IsNullOrEmpty(plan.Origen) && lineas.All(l => l.Orden != 1)) faltantes.Add("el pasaje");
         if (lineas.All(l => l.Orden != 2)) faltantes.Add("el hospedaje");
         if (lineas.All(l => l.Orden != 3)) faltantes.Add("la comida");
-        if (faltantes.Count > 0)
-            texto.Append($"(No tengo precios registrados para {string.Join(" ni ", faltantes)}.)\n");
+        var aviso = faltantes.Count > 0 ? $"No tengo precios registrados para {string.Join(" ni ", faltantes)}." : null;
+        if (aviso != null)
+            texto.Append($"({aviso})\n");
 
         texto.Append($"\nTotal: RD$ {TextoNumero(total)}");
 
-        if (diferencia >= 0)
+        if (cabe)
         {
-            texto.Append($" → te sobran RD$ {TextoNumero(diferencia)} para excursiones, guías y recuerdos. ¡Buen viaje!");
+            texto.Append(total == monto
+                ? " → usas justo todo tu presupuesto. ¡Buen viaje!"
+                : $" → te sobran RD$ {TextoNumero(monto - total)} para excursiones, guías y recuerdos. ¡Buen viaje!");
+            if (!economico && masBarato.Sum(l => l.Subtotal) < total)
+                r.Sugerencias.Add("Más barato");
             r.Sugerencias.AddRange(new[] { "¿Hay guías turísticos?", "¿Qué lugares puedo visitar?" });
         }
         else
         {
-            texto.Append($" → te faltan RD$ {TextoNumero(-diferencia)}.");
-            var alcanza = await NochesQueAlcanzanAsync(plan, ct);
-            var opciones = new List<string>();
+            texto.Append($" → te faltan RD$ {TextoNumero(total - monto)}.");
 
-            if (plan.Modo != "barato")
-            {
-                opciones.Add("escoger las opciones más económicas («Más barato»)");
-                r.Sugerencias.Add("Más barato");
-            }
+            // Opciones: menos noches (las que alcanzan con lo más económico) o más dinero
+            var alcanza = NochesQueAlcanzan(masBarato, noches, monto);
             if (alcanza is > 0 && alcanza < noches)
             {
-                opciones.Add($"quedarte {alcanza} {(alcanza == 1 ? "noche" : "noches")} («Menos noches»)");
-                r.Sugerencias.Add("Menos noches");
+                texto.Append($" Con tu dinero alcanza para {alcanza} {(alcanza == 1 ? "noche" : "noches")}.");
+                r.Sugerencias.Add(alcanza == 1 ? "Solo 1 noche" : $"Solo {alcanza} noches");
+            }
+            else
+            {
+                texto.Append(" Con los precios registrados no alcanza ni para una noche.");
             }
 
-            texto.Append(opciones.Count > 0
-                ? $" Puedo {string.Join(" o ", opciones)}."
-                : " Con los precios registrados no alcanza ni para una noche; prueba con otro monto.");
+            // Monto redondeado a 500 que sí cubre el plan más barato
+            var necesario = Math.Ceiling(total / 500m) * 500m;
+            r.Sugerencias.Add($"Tengo RD$ {TextoNumero(necesario)}");
         }
+
+        r.Presupuesto = new PresupuestoChat
+        {
+            Monto = monto,
+            Total = total,
+            Noches = noches,
+            Origen = plan.Origen ?? "",
+            Cabe = cabe,
+            Ajustado = ajustado,
+            Economico = economico,
+            Lineas = lineas.Select(l => new LineaPresupuestoChat(ClaseLinea(l.Orden), l.Concepto, l.Opcion, DetalleLinea(l), l.Subtotal)
+            {
+                Url = l.IdPrestador is { } id ? $"/Sitio/Prestador/{id}" : null
+            }).ToList()
+        };
 
         // Fichas de los prestadores sugeridos (con su botón de contacto)
         var ids = lineas.Where(l => l.IdPrestador != null).Select(l => l.IdPrestador!.Value).ToList();
@@ -447,6 +556,29 @@ public class ChatbotService
 
         r.TipoRespuesta = TiposRespuesta.Datos;
         r.Respuesta = texto.ToString();
+        r.TextoCorto = aviso is null ? introduccion : $"{introduccion}\n({aviso})";
+    }
+
+    // Orden que devuelve sp_PresupuestoViaje: 1 pasaje, 2 hospedaje, 3 comida, 4 transporte local
+    private static string ClaseLinea(int orden) => orden switch
+    {
+        1 => "pasaje",
+        2 => "hospedaje",
+        3 => "comida",
+        _ => "transporte"
+    };
+
+    // "RD$ 800 × 5 noches", "RD$ 75 × 15 comidas"...
+    private static string DetalleLinea(LineaPresupuesto l)
+    {
+        var unidad = l.Orden switch
+        {
+            1 => "trayectos",
+            2 => l.Cantidad == 1 ? "noche" : "noches",
+            3 => "comidas",
+            _ => "viajes"
+        };
+        return $"RD$ {TextoNumero(l.PrecioUnitario)} × {l.Cantidad} {unidad}";
     }
 
     // ------------------------------------------------------------------ búsquedas de prestadores
@@ -739,16 +871,22 @@ public class ChatbotService
         if (destino is null && c.Contexto.LugarEnFoco is { } enFoco && TextoChat.TieneReferencia(c.Normalizado))
             destino = fichas.FirstOrDefault(f => f.Ref == enFoco);
 
-        // Las rutas unen lugares turísticos; para un prestador se da su ubicación
-        if (destino is { Ref.EsPrestador: true })
+        // Las rutas unen lugares turísticos; para un prestador, o si pregunta "¿dónde queda…?", se da la ubicación
+        if (destino is not null && (destino.Ref.EsPrestador || TextoChat.PideUbicacion(c.Normalizado)))
         {
-            await DescribirUbicacionAsync(c, r, destino, ct);
+            await DescribirUbicacionAsync(c, r, destino, ct, pidioUbicacion: true);
             return;
         }
 
+        // "¿Cómo llego a X?" usa las rutas que terminan en X; "rutas desde X", las que salen de X
         var consulta = _context.Rutas.AsNoTracking().Where(x => x.Activa);
         if (destino is not null)
-            consulta = consulta.Where(x => x.IdLugarDestino == destino.Ref.Id || x.IdLugarOrigen == destino.Ref.Id);
+        {
+            var id = destino.Ref.Id;
+            consulta = TextoChat.PideComoLlegar(c.Normalizado) ? consulta.Where(x => x.IdLugarDestino == id)
+                : TextoChat.PideSalida(c.Normalizado) ? consulta.Where(x => x.IdLugarOrigen == id)
+                : consulta.Where(x => x.IdLugarDestino == id || x.IdLugarOrigen == id);
+        }
 
         var rutas = await ProyectarRutas(consulta).ToListAsync(ct);
 
@@ -820,7 +958,9 @@ public class ChatbotService
 
         if (objetivo is null)
         {
-            PedirAclaracion(c, r, fichas, dominioIntencion);
+            // "¿Qué es el larimar?" no nombra una ficha, pero puede responderse con un dato curioso
+            if (!await ResponderConDatoAsync(c, r, fichas, ct))
+                PedirAclaracion(c, r, fichas, dominioIntencion);
             return;
         }
 
@@ -931,36 +1071,42 @@ public class ChatbotService
 
         var documentos = await _context.DocumentosConocimiento.AsNoTracking()
             .Where(d => d.Activo && d.IdReferencia == idLugar && (d.TipoFuente == null || TiposFuenteLugar.Contains(d.TipoFuente)))
-            .Select(d => d.Contenido)
+            .Select(d => new { d.Titulo, d.Contenido })
             .ToListAsync(ct);
 
-        var texto = new StringBuilder();
-        texto.AppendLine(lugar.Nombre);
+        var foto = await _context.Imagenes.AsNoTracking()
+            .Where(i => i.IdLugar == lugar.IdLugar)
+            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
+            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
 
-        if (!string.IsNullOrWhiteSpace(lugar.DescripcionCorta))
-            texto.AppendLine(lugar.DescripcionCorta.Trim());
+        var tipo = lugar.Atractivo?.TipoAtractivo ?? (lugar.Atractivo != null ? "Atractivo" : "Lugar de interés");
+        var detalle = new DetalleChat
+        {
+            Clase = "lugar",
+            Titulo = lugar.Nombre,
+            Subtitulo = tipo,
+            Imagen = SitioPublico.UrlSegura(foto),
+            Icono = lugar.Atractivo != null ? "fa-mountain" : "fa-map-marker-alt",
+            Resumen = string.IsNullOrWhiteSpace(lugar.DescripcionCorta) ? null : lugar.DescripcionCorta.Trim()
+        };
         if (!string.IsNullOrWhiteSpace(lugar.Descripcion) && lugar.Descripcion.Trim() != lugar.DescripcionCorta?.Trim())
-            texto.AppendLine(TextoChat.Recortar(lugar.Descripcion, 700));
-
-        var datos = new List<string>();
-        var parrafos = new List<string>();
+            Seccion(detalle, null, lugar.Descripcion, 700);
 
         if (lugar.Atractivo is { } a)
         {
-            Agregar(datos, "Tipo", a.TipoAtractivo);
-            Agregar(datos, "Dificultad", a.NivelDificultad);
-            Agregar(datos, "Duración de la visita", TextoDuracion(a.DuracionVisitaMinutos));
-            Agregar(datos, "Estado de conservación", a.EstadoConservacion);
-            Agregar(parrafos, "Información natural", TextoChat.Recortar(a.InformacionNatural, 400));
-            Agregar(parrafos, "Información cultural", TextoChat.Recortar(a.InformacionCultural, 400));
-            Agregar(parrafos, "Cómo acceder", TextoChat.Recortar(a.InformacionAcceso, 400));
+            Dato(detalle, "fa-hiking", "Dificultad", a.NivelDificultad);
+            Dato(detalle, "fa-clock", "Duración de la visita", TextoDuracion(a.DuracionVisitaMinutos));
+            Dato(detalle, "fa-leaf", "Estado de conservación", a.EstadoConservacion);
+            Seccion(detalle, "Información natural", a.InformacionNatural, 400);
+            Seccion(detalle, "Información cultural", a.InformacionCultural, 400);
+            Seccion(detalle, "Cómo acceder", a.InformacionAcceso, 400);
         }
 
-        Agregar(datos, "Ubicación", Unir(", ", lugar.Direccion, lugar.Municipio, lugar.Provincia));
+        Dato(detalle, "fa-map-marker-alt", "Ubicación", Unir(", ", lugar.Direccion, lugar.Municipio, lugar.Provincia));
 
         if (lugar.Horarios.Count > 0)
         {
-            Agregar(datos, "Horario de visita", string.Join("; ", lugar.Horarios.OrderBy(x => x.DiaSemana).Select(x =>
+            Dato(detalle, "fa-door-open", "Horario de visita", string.Join("; ", lugar.Horarios.OrderBy(x => x.DiaSemana).Select(x =>
                 $"{Formato.DiaSemana(x.DiaSemana)}: {(x.Cerrado ? "cerrado" : TextoHorario(x.HoraApertura, x.HoraCierre) ?? "abierto")}")));
         }
 
@@ -968,33 +1114,39 @@ public class ChatbotService
         if (!string.IsNullOrWhiteSpace(lugar.Telefono)) contactos.Add($"Teléfono: {lugar.Telefono}");
         if (!string.IsNullOrWhiteSpace(lugar.Correo)) contactos.Add($"Correo: {lugar.Correo}");
         if (!string.IsNullOrWhiteSpace(lugar.SitioWeb)) contactos.Add($"Sitio web: {lugar.SitioWeb}");
-        Agregar(datos, "Contacto", string.Join("; ", contactos.Distinct()));
+        Dato(detalle, "fa-phone", "Contacto", string.Join("; ", contactos.Distinct()));
 
-        Agregar(datos, "Categorías", string.Join(", ", lugar.Categorias.Where(x => x.Activo).Select(x => x.Nombre)));
-        Agregar(datos, "Comodidades", string.Join(", ", lugar.Servicios.Where(x => x.Activo).Select(x => x.Nombre)));
+        Dato(detalle, "fa-tags", "Categorías", string.Join(", ", lugar.Categorias.Where(x => x.Activo).Select(x => x.Nombre)));
+        Dato(detalle, "fa-concierge-bell", "Comodidades", string.Join(", ", lugar.Servicios.Where(x => x.Activo).Select(x => x.Nombre)));
 
-        if (datos.Count > 0)
-            texto.AppendLine().Append(string.Join("\n", datos.Select(d => "• " + d))).AppendLine();
+        foreach (var documento in documentos)
+            Seccion(detalle, documento.Titulo, documento.Contenido);
 
-        foreach (var parrafo in parrafos.Concat(documentos.Select(d => TextoChat.Recortar(d, 600))))
-            texto.AppendLine().AppendLine(parrafo);
+        // Un dato curioso que nombra el lugar; con otras palabras en la pregunta ("¿por qué es salado?"), el que mejor responde
+        var datosDelLugar = (await DatosCuriososAsync(ct))
+            .Where(d => TextoChat.BuscarPorNombre(TextoChat.Normalizar(d.Texto), new[] { lugar.Nombre }, n => n) != null)
+            .ToList();
+        if (ElegirDato(datosDelLugar, TextoChat.PalabrasTema(c.Normalizado), c.Contexto.DatosMostrados).Dato is { } dato)
+        {
+            c.Contexto.DatosMostrados.Add(dato.IdDato);
+            Seccion(detalle, "Dato curioso", dato.Texto, 500);
+        }
 
-        texto.AppendLine().Append("¿Quieres saber cómo llegar, buscar un guía o ver qué otros lugares hay cerca?");
-
-        var foto = await _context.Imagenes.AsNoTracking()
-            .Where(i => i.IdLugar == lugar.IdLugar)
-            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
-            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
+        Accion(detalle, "ficha", "Ver ficha", $"/Sitio/Lugar/{lugar.IdLugar}");
+        Accion(detalle, "mapa", "Ver en el mapa", EnlaceMapa(lugar.Latitud, lugar.Longitud));
+        Accion(detalle, "telefono", "Llamar", SitioPublico.EnlaceTelefono(lugar.Telefono));
 
         c.Contexto.RecordarLugar(Dominio.Atractivo, RefFicha.Lugar(lugar.IdLugar));
         r.Resultados.Add(Tarjeta(new ElementoLista(RefFicha.Lugar(lugar.IdLugar), lugar.Nombre, lugar.DescripcionCorta, null)
         {
-            Subtitulo = lugar.Atractivo?.TipoAtractivo ?? (lugar.Atractivo != null ? "Atractivo" : "Lugar de interés"),
+            Subtitulo = tipo,
             Imagen = foto,
-            Icono = lugar.Atractivo != null ? "fa-mountain" : "fa-map-marker-alt",
+            Icono = detalle.Icono,
             Telefono = lugar.Telefono
         }));
-        Responder(r, TiposRespuesta.Datos, texto.ToString().Trim(), limpiarResultados: false);
+        r.Sugerencias.AddRange(new[] { $"¿Cómo llego a {lugar.Nombre}?", "¿Hay guías turísticos?" });
+        ResponderDetalle(r, detalle, $"Esto es lo que sé de {lugar.Nombre}:",
+            "¿Quieres saber cómo llegar, buscar un guía o ver qué otros lugares hay cerca?");
     }
 
     private async Task DescribirPrestadorAsync(ConsultaChat c, RespuestaChat r, int idPrestador, CancellationToken ct)
@@ -1013,30 +1165,38 @@ public class ChatbotService
 
         var documentos = await _context.DocumentosConocimiento.AsNoTracking()
             .Where(d => d.Activo && d.IdReferencia == idPrestador && d.TipoFuente == TipoFuentePrestador)
-            .Select(d => d.Contenido)
+            .Select(d => new { d.Titulo, d.Contenido })
             .ToListAsync(ct);
+
+        var foto = await _context.Imagenes.AsNoTracking()
+            .Where(i => i.IdPrestador == p.IdPrestador)
+            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
+            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
 
         var grupo = p.TipoPrestador?.Grupo;
         var dominio = DominioDeGrupo(grupo);
 
-        var texto = new StringBuilder();
-        texto.AppendLine($"{p.Nombre} — {p.TipoPrestador?.Nombre}");
-
-        if (!string.IsNullOrWhiteSpace(p.DescripcionCorta))
-            texto.AppendLine(p.DescripcionCorta.Trim());
+        var detalle = new DetalleChat
+        {
+            Clase = "prestador",
+            Titulo = p.Nombre,
+            Subtitulo = p.TipoPrestador?.Nombre,
+            Imagen = SitioPublico.UrlSegura(foto),
+            Icono = IconoPrestador(p.TipoPrestador?.Icono, grupo),
+            Resumen = string.IsNullOrWhiteSpace(p.DescripcionCorta) ? null : p.DescripcionCorta.Trim()
+        };
         if (!string.IsNullOrWhiteSpace(p.Descripcion) && p.Descripcion.Trim() != p.DescripcionCorta?.Trim())
-            texto.AppendLine(TextoChat.Recortar(p.Descripcion, 700));
+            Seccion(detalle, null, p.Descripcion, 700);
 
-        var datos = new List<string>();
-        Agregar(datos, GruposPrestador.EtiquetaEspecialidad(grupo), p.Especialidad);
-        Agregar(datos, "Precio", TextoPrecio(p.PrecioDesde, p.PrecioHasta));
-        Agregar(datos, "Sobre el precio", p.InformacionPrecio);
-        Agregar(datos, GruposPrestador.EtiquetaCapacidad(grupo), p.Capacidad > 0 ? p.Capacidad.ToString() : null);
-        Agregar(datos, "Zona de servicio", p.ZonaCobertura);
-        Agregar(datos, "Horario", p.HorarioAtencion);
-        if (p.RequiereReserva) datos.Add("Requiere reserva o cita");
-        if (p.ServicioDomicilio) datos.Add("Ofrece servicio a domicilio");
-        Agregar(datos, "Ubicación", Unir(", ", p.Direccion, p.Municipio, p.Provincia));
+        Dato(detalle, "fa-star", GruposPrestador.EtiquetaEspecialidad(grupo), p.Especialidad);
+        Dato(detalle, "fa-money-bill-wave", "Precio", TextoPrecio(p.PrecioDesde, p.PrecioHasta));
+        Dato(detalle, "fa-info-circle", "Sobre el precio", p.InformacionPrecio);
+        Dato(detalle, "fa-users", GruposPrestador.EtiquetaCapacidad(grupo), p.Capacidad > 0 ? p.Capacidad.ToString() : null);
+        Dato(detalle, "fa-map", "Zona de servicio", p.ZonaCobertura);
+        Dato(detalle, "fa-clock", "Horario", p.HorarioAtencion);
+        if (p.RequiereReserva) Dato(detalle, "fa-calendar-check", "Reserva", "Requiere reserva o cita");
+        if (p.ServicioDomicilio) Dato(detalle, "fa-motorcycle", "A domicilio", "Ofrece servicio a domicilio");
+        Dato(detalle, "fa-map-marker-alt", "Ubicación", Unir(", ", p.Direccion, p.Municipio, p.Provincia));
 
         var contactos = new List<string>();
         if (!string.IsNullOrWhiteSpace(p.Telefono)) contactos.Add($"Teléfono: {p.Telefono}");
@@ -1044,42 +1204,40 @@ public class ChatbotService
         if (!string.IsNullOrWhiteSpace(p.Correo)) contactos.Add($"Correo: {p.Correo}");
         if (!string.IsNullOrWhiteSpace(p.RedSocial)) contactos.Add($"Redes: {p.RedSocial}");
         if (!string.IsNullOrWhiteSpace(p.SitioWeb)) contactos.Add($"Sitio web: {p.SitioWeb}");
-        Agregar(datos, "Contacto", string.Join("; ", contactos));
-        Agregar(datos, grupo == GruposPrestador.Gastronomia ? "Menú" : "Reservas", p.EnlaceExterno);
-        Agregar(datos, "Comodidades", string.Join(", ", p.Servicios.Where(x => x.Activo).Select(x => x.Nombre)));
-
-        if (datos.Count > 0)
-            texto.AppendLine().Append(string.Join("\n", datos.Select(d => "• " + d))).AppendLine();
+        Dato(detalle, "fa-phone", "Contacto", string.Join("; ", contactos));
+        Dato(detalle, "fa-concierge-bell", "Comodidades", string.Join(", ", p.Servicios.Where(x => x.Activo).Select(x => x.Nombre)));
 
         foreach (var documento in documentos)
-            texto.AppendLine().AppendLine(TextoChat.Recortar(documento, 600));
+            Seccion(detalle, documento.Titulo, documento.Contenido);
 
-        texto.AppendLine().Append(grupo switch
-        {
-            GruposPrestador.Alojamiento => "¿Quieres ver otros alojamientos o lugares cercanos para visitar?",
-            GruposPrestador.Gastronomia => "¿Quieres ver otros lugares para comer o saber cómo llegar?",
-            GruposPrestador.Guia => "¿Quieres ver otros guías o los atractivos que puedes visitar?",
-            _ => "¿Quieres ver otras opciones parecidas?"
-        });
-
-        var foto = await _context.Imagenes.AsNoTracking()
-            .Where(i => i.IdPrestador == p.IdPrestador)
-            .OrderByDescending(i => i.EsPrincipal).ThenBy(i => i.OrdenVisualizacion)
-            .Select(i => i.UrlImagen).FirstOrDefaultAsync(ct);
+        Accion(detalle, "whatsapp", "WhatsApp",
+            SitioPublico.EnlaceWhatsApp(p.WhatsApp, $"Hola {p.Nombre}, le escribo desde el asistente de Turismo Jimaní."));
+        Accion(detalle, "telefono", "Llamar", SitioPublico.EnlaceTelefono(p.Telefono));
+        Accion(detalle, "ficha", "Ver perfil", $"/Sitio/Prestador/{p.IdPrestador}");
+        Accion(detalle, "enlace", grupo == GruposPrestador.Gastronomia ? "Ver menú" : "Reservar", SitioPublico.UrlSegura(p.EnlaceExterno));
+        Accion(detalle, "mapa", "Ver en el mapa", EnlaceMapa(p.Latitud, p.Longitud));
 
         c.Contexto.RecordarLugar(dominio, RefFicha.Prestador(p.IdPrestador));
         r.Resultados.Add(Tarjeta(new ElementoLista(RefFicha.Prestador(p.IdPrestador), p.Nombre, p.DescripcionCorta, null)
         {
             Subtitulo = p.TipoPrestador?.Nombre,
             Imagen = foto,
-            Icono = IconoPrestador(p.TipoPrestador?.Icono, grupo),
+            Icono = detalle.Icono,
             WhatsApp = p.WhatsApp,
             Telefono = p.Telefono
         }));
-        Responder(r, TiposRespuesta.Datos, texto.ToString().Trim(), limpiarResultados: false);
+        ResponderDetalle(r, detalle, $"Esta es la información de {p.Nombre}:", grupo switch
+        {
+            GruposPrestador.Alojamiento => "¿Quieres ver otros alojamientos o lugares cercanos para visitar?",
+            GruposPrestador.Gastronomia => "¿Quieres ver otros lugares para comer o saber cómo llegar?",
+            GruposPrestador.Guia => "¿Quieres ver otros guías o los atractivos que puedes visitar?",
+            _ => "¿Quieres ver otras opciones parecidas?"
+        });
     }
 
-    private async Task DescribirUbicacionAsync(ConsultaChat c, RespuestaChat r, FichaResumen destino, CancellationToken ct)
+    // pidioUbicacion: respuesta a "¿dónde queda…?" (si no, se explica que no hay ruta registrada hacia el lugar)
+    private async Task DescribirUbicacionAsync(ConsultaChat c, RespuestaChat r, FichaResumen destino, CancellationToken ct,
+        bool pidioUbicacion = false)
     {
         string ubicacionTexto;
         if (destino.Ref.EsPrestador)
@@ -1095,25 +1253,45 @@ public class ChatbotService
             ubicacionTexto = Unir(", ", l.Direccion, l.Municipio, l.Provincia);
         }
 
-        var texto = new StringBuilder(destino.Ref.EsPrestador
+        var directa = destino.Ref.EsPrestador || pidioUbicacion;
+        var texto = new StringBuilder(directa
             ? $"Esta es la ubicación registrada de {destino.Nombre}"
             : $"No tengo una ruta registrada hacia {destino.Nombre}");
         texto.Append(string.IsNullOrEmpty(ubicacionTexto)
-            ? (destino.Ref.EsPrestador ? ": no tiene dirección registrada." : ".")
-            : destino.Ref.EsPrestador ? $": {ubicacionTexto}." : $", pero según los datos registrados se encuentra en {ubicacionTexto}.");
+            ? (directa ? ": no tiene dirección registrada." : ".")
+            : directa ? $": {ubicacionTexto}." : $", pero según los datos registrados se encuentra en {ubicacionTexto}.");
 
-        if (destino.Latitud.HasValue && destino.Longitud.HasValue)
-        {
-            var coordenadas = $"{destino.Latitud.Value.ToString("0.######", Invariante)},{destino.Longitud.Value.ToString("0.######", Invariante)}";
-            texto.Append($"\n\nCoordenadas: {coordenadas}\nPuedes abrirlas en un mapa: https://www.google.com/maps?q={coordenadas}");
-        }
+        var coordenadas = Coordenadas(destino.Latitud, destino.Longitud);
+        if (coordenadas != null)
+            texto.Append($"\n\nCoordenadas: {coordenadas}\nPuedes abrirlas en un mapa: {EnlaceMapa(destino.Latitud, destino.Longitud)}");
 
         var hayTransporte = await _context.Prestadores.AnyAsync(x => x.Activo && x.TipoPrestador!.Grupo == GruposPrestador.Transporte, ct);
         if (hayTransporte)
+        {
             texto.Append("\n\nSi quieres, también puedo mostrarte los servicios de transporte registrados.");
+            r.Sugerencias.Add("Necesito transporte");
+        }
+
+        var detalle = new DetalleChat
+        {
+            Clase = "ubicacion",
+            Titulo = destino.Nombre,
+            Subtitulo = "Ubicación",
+            Icono = "fa-map-marked-alt",
+            Resumen = directa ? null : "Todavía no hay una ruta registrada hacia este lugar."
+        };
+        Dato(detalle, "fa-map-marker-alt", "Dirección", string.IsNullOrEmpty(ubicacionTexto) ? "Sin dirección registrada" : ubicacionTexto);
+        Dato(detalle, "fa-crosshairs", "Coordenadas", coordenadas);
+        Accion(detalle, "mapa", "Abrir en Google Maps", EnlaceMapa(destino.Latitud, destino.Longitud));
+        Accion(detalle, "ficha", destino.Ref.EsPrestador ? "Ver perfil" : "Ver ficha",
+            destino.Ref.EsPrestador ? $"/Sitio/Prestador/{destino.Ref.Id}" : $"/Sitio/Lugar/{destino.Ref.Id}");
 
         c.Contexto.RecordarLugar(null, destino.Ref);
         r.Resultados.Add(new ResultadoChat(destino.Ref.Id, destino.Nombre, destino.Ref.EsPrestador ? "Prestador" : "Lugar", ubicacionTexto));
+        r.Detalle = detalle;
+        r.TextoCorto = directa
+            ? $"Esta es la ubicación de {destino.Nombre}:"
+            : $"No tengo una ruta registrada hacia {destino.Nombre}, pero te muestro dónde queda:";
         Responder(r, TiposRespuesta.Datos, texto.ToString(), limpiarResultados: false);
     }
 
@@ -1167,29 +1345,35 @@ public class ChatbotService
 
     private void DescribirRuta(ConsultaChat c, RespuestaChat r, RutaResumen ruta)
     {
-        var texto = new StringBuilder(ruta.Nombre).AppendLine();
+        var detalle = new DetalleChat
+        {
+            Clase = "ruta",
+            Titulo = ruta.Nombre,
+            Subtitulo = "Ruta",
+            Icono = "fa-route",
+            Origen = ruta.Origen,
+            Destino = ruta.Destino
+        };
+        Dato(detalle, "fa-road", "Distancia", ruta.DistanciaKilometros.HasValue ? $"{TextoNumero(ruta.DistanciaKilometros.Value)} km" : null);
+        Dato(detalle, "fa-clock", "Duración aproximada", TextoDuracion(ruta.DuracionMinutos));
+        Dato(detalle, "fa-hiking", "Dificultad", ruta.NivelDificultad);
+        Dato(detalle, IconoTransporte(ruta.TipoTransporte), "Transporte", ruta.TipoTransporte);
+        Seccion(detalle, null, ruta.Descripcion);
+        Seccion(detalle, "Instrucciones", ruta.Instrucciones, 700);
 
-        var datos = new List<string>();
-        if (ruta.Origen != null || ruta.Destino != null)
-            datos.Add($"Recorrido: {ruta.Origen ?? "—"} → {ruta.Destino ?? "—"}");
-        Agregar(datos, "Distancia", ruta.DistanciaKilometros.HasValue ? $"{TextoNumero(ruta.DistanciaKilometros.Value)} km" : null);
-        Agregar(datos, "Duración aproximada", TextoDuracion(ruta.DuracionMinutos));
-        Agregar(datos, "Dificultad", ruta.NivelDificultad);
-        Agregar(datos, "Transporte", ruta.TipoTransporte);
-
-        if (datos.Count > 0)
-            texto.AppendLine(string.Join("\n", datos.Select(d => "• " + d)));
-        if (!string.IsNullOrWhiteSpace(ruta.Descripcion))
-            texto.AppendLine().AppendLine(TextoChat.Recortar(ruta.Descripcion, 600));
-        if (!string.IsNullOrWhiteSpace(ruta.Instrucciones))
-            texto.AppendLine().AppendLine("Instrucciones: " + TextoChat.Recortar(ruta.Instrucciones, 700));
+        Accion(detalle, "mapa", "Indicaciones en Google Maps", EnlaceIndicaciones(
+            Coordenadas(ruta.OrigenLatitud, ruta.OrigenLongitud), Coordenadas(ruta.DestinoLatitud, ruta.DestinoLongitud)));
+        if (ruta.IdLugarDestino is { } idDestino)
+            Accion(detalle, "ficha", "Ver destino", $"/Sitio/Lugar/{idDestino}");
 
         c.Contexto.RecordarRutas(new[] { ruta.IdRuta });
         if (ruta.IdLugarDestino is { } destino)
             c.Contexto.LugarEnFoco = RefFicha.Lugar(destino);
 
         r.Resultados.Add(new ResultadoChat(ruta.IdRuta, ruta.Nombre, "Ruta", ResumenRuta(ruta).Trim(' ', '—')));
-        Responder(r, TiposRespuesta.Datos, texto.ToString().Trim(), limpiarResultados: false);
+        if (ruta.Destino != null)
+            r.Sugerencias.Add($"Háblame de {ruta.Destino}");
+        ResponderDetalle(r, detalle, $"Esta es la ruta «{ruta.Nombre}»:", null);
     }
 
     private async Task AyudaAsync(RespuestaChat r, CancellationToken ct)
@@ -1208,6 +1392,9 @@ public class ChatbotService
         texto.AppendLine("• ¿Hay guías turísticos?");
         texto.AppendLine("• ¿Hay barbería?");
         texto.AppendLine("• ¿Qué rutas hay?");
+        texto.AppendLine("• ¿Qué eventos hay este mes?");
+        texto.AppendLine("• Tengo 10,000 pesos para 3 días");
+        texto.AppendLine("• Cuéntame un dato curioso");
         if (ejemploAtractivo != null)
         {
             texto.AppendLine($"• Háblame de {ejemploAtractivo}");
@@ -1215,6 +1402,357 @@ public class ChatbotService
         }
 
         Responder(r, TiposRespuesta.Conversacional, texto.ToString().Trim());
+    }
+
+    // ------------------------------------------------------------------ eventos
+
+    // Eventos publicados en el sitio (también los pasados, para responder "ese evento ya pasó")
+    private async Task<List<EventoResumen>> CargarEventosAsync(CancellationToken ct) =>
+        await _context.Eventos.AsNoTracking()
+            .Where(e => e.Publicado)
+            .Select(e => new EventoResumen(e.IdEvento, e.Titulo, e.Tipo, e.Resumen, e.FechaInicio, e.FechaFin, e.IdLugar,
+                e.Lugar != null ? e.Lugar.Nombre : e.LugarTexto, e.ImagenUrl))
+            .ToListAsync(ct);
+
+    private async Task BuscarEventosAsync(ConsultaChat c, RespuestaChat r, List<EventoResumen> eventos,
+        EventoResumen? mencionado, FichaResumen? ficha, CancellationToken ct)
+    {
+        var ctx = c.Contexto;
+
+        // "El 2" sobre la última lista de eventos
+        if (mencionado is null && ctx.Dominio == Dominio.Evento
+            && TextoChat.ObtenerOrdinal(c.Normalizado, ctx.UltimosEventos.Count) is { } indice)
+            mencionado = eventos.FirstOrDefault(e => e.IdEvento == ctx.UltimosEventos[indice]);
+
+        if (mencionado is not null)
+        {
+            await DescribirEventoAsync(c, r, mencionado.IdEvento, ct);
+            return;
+        }
+
+        var hoy = DateTime.Today;
+        var proximos = eventos.Where(e => (e.FechaFin ?? e.FechaInicio).Date >= hoy).OrderBy(e => e.FechaInicio).ToList();
+        if (proximos.Count == 0)
+        {
+            Responder(r, TiposRespuesta.SinResultados,
+                "Por ahora no hay eventos próximos publicados. ¿Quieres que te muestre los lugares que puedes visitar?");
+            r.Sugerencias.AddRange(new[] { "¿Qué lugares puedo visitar?", "Cuéntame un dato curioso" });
+            return;
+        }
+
+        // Filtros del mensaje: tipo ("promociones"), periodo ("este mes") y lugar o prestador ("en el lago")
+        var elegidos = proximos;
+        var tipo = TextoChat.TipoEventoPedido(c.Normalizado);
+        var descripcion = tipo switch
+        {
+            null => "eventos",
+            "Promoción" => "promociones",
+            _ => $"eventos de tipo «{tipo}»"
+        };
+        if (tipo != null)
+            elegidos = elegidos.Where(e => e.Tipo == tipo).ToList();
+
+        if (TextoChat.PeriodoPedido(c.Normalizado, hoy) is { } periodo)
+        {
+            elegidos = elegidos.Where(e => e.FechaInicio.Date <= periodo.Hasta && (e.FechaFin ?? e.FechaInicio).Date >= periodo.Desde).ToList();
+            descripcion += " " + periodo.Texto;
+        }
+
+        if (ficha is not null)
+        {
+            var nombre = TextoChat.Normalizar(ficha.Nombre);
+            elegidos = elegidos.Where(e => (!ficha.Ref.EsPrestador && e.IdLugar == ficha.Ref.Id)
+                                           || TextoChat.Normalizar(e.Titulo).Contains(nombre)).ToList();
+            descripcion += $" en {ficha.Nombre}";
+        }
+
+        var filtrado = elegidos != proximos;
+        if (filtrado && elegidos.Count == 1)
+        {
+            await DescribirEventoAsync(c, r, elegidos[0].IdEvento, ct);
+            return;
+        }
+
+        string introduccion;
+        if (filtrado && elegidos.Count == 0)
+        {
+            introduccion = $"No encontré {descripcion}. Estos son los próximos eventos en Jimaní:";
+            elegidos = proximos;
+        }
+        else
+        {
+            introduccion = filtrado ? $"Estos son los {descripcion} que tengo registrados:" : "Estos son los próximos eventos en Jimaní:";
+        }
+
+        var mostrados = elegidos.Take(MaximoResultados).ToList();
+        var texto = new StringBuilder(introduccion).Append('\n');
+        for (var i = 0; i < mostrados.Count; i++)
+        {
+            var e = mostrados[i];
+            texto.Append($"{i + 1}. {e.Titulo} — {TextoFechaEvento(e.FechaInicio, e.FechaFin)}{(e.Lugar != null ? $", {e.Lugar}" : "")}\n");
+        }
+        texto.Append("\n¿Quieres los detalles de alguno? Por ejemplo, escribe «el 1».");
+
+        ctx.RecordarEventos(mostrados.Select(e => e.IdEvento));
+        r.Resultados.AddRange(mostrados.Select((e, i) => FichaEvento(e) with { Numero = i + 1 }));
+        r.TextoCorto = $"{introduccion}\n\n¿Quieres los detalles de alguno?";
+        Responder(r, TiposRespuesta.Datos, texto.ToString(), limpiarResultados: false);
+    }
+
+    private async Task DescribirEventoAsync(ConsultaChat c, RespuestaChat r, int idEvento, CancellationToken ct)
+    {
+        var evento = await _context.Eventos.AsNoTracking()
+            .Include(e => e.Lugar)
+            .FirstOrDefaultAsync(e => e.IdEvento == idEvento && e.Publicado, ct);
+
+        if (evento is null)
+        {
+            Responder(r, TiposRespuesta.SinResultados, "No encontré información publicada sobre ese evento.");
+            return;
+        }
+
+        var lugar = evento.Lugar?.Nombre ?? evento.LugarTexto;
+        var pasado = (evento.FechaFin ?? evento.FechaInicio).Date < DateTime.Today;
+        var cultura = CultureInfo.CurrentCulture;
+
+        var detalle = new DetalleChat
+        {
+            Clase = "evento",
+            Titulo = evento.Titulo,
+            Subtitulo = evento.Tipo,
+            Imagen = SitioPublico.UrlSegura(evento.ImagenUrl),
+            Icono = "fa-calendar-alt",
+            Resumen = string.IsNullOrWhiteSpace(evento.Resumen) ? null : evento.Resumen.Trim(),
+            Fecha = new FechaDetalle(evento.FechaInicio.ToString("ddd", cultura).TrimEnd('.'),
+                evento.FechaInicio.Day.ToString(), evento.FechaInicio.ToString("MMM", cultura).TrimEnd('.'))
+        };
+        Dato(detalle, "fa-calendar-alt", "Fecha", TextoFechaEvento(evento.FechaInicio, evento.FechaFin));
+        Dato(detalle, "fa-map-marker-alt", "Lugar", lugar);
+        Dato(detalle, "fa-users", "Organiza", evento.Organizador);
+        if (pasado)
+            Dato(detalle, "fa-history", "Estado", "Este evento ya pasó");
+        Seccion(detalle, null, evento.Contenido);
+
+        Accion(detalle, "ficha", "Ver evento", $"/Sitio/Evento/{evento.IdEvento}");
+        Accion(detalle, "enlace", "Más información", SitioPublico.UrlSegura(evento.EnlaceExterno));
+        Accion(detalle, "mapa", "Ver en el mapa", EnlaceMapa(evento.Lugar?.Latitud, evento.Lugar?.Longitud));
+
+        c.Contexto.RecordarEventos(new[] { evento.IdEvento });
+        if (evento.Lugar is { } lugarRegistrado)
+        {
+            // "¿Cómo llego?" después del evento se refiere a su lugar
+            c.Contexto.LugarEnFoco = RefFicha.Lugar(lugarRegistrado.IdLugar);
+            r.Sugerencias.Add($"¿Cómo llego a {lugarRegistrado.Nombre}?");
+        }
+        r.Sugerencias.Add("¿Qué otros eventos hay?");
+
+        r.Resultados.Add(FichaEvento(new EventoResumen(evento.IdEvento, evento.Titulo, evento.Tipo, evento.Resumen,
+            evento.FechaInicio, evento.FechaFin, evento.IdLugar, lugar, evento.ImagenUrl)));
+        ResponderDetalle(r, detalle,
+            pasado ? "Este evento ya pasó; estos fueron sus detalles:" : "Estos son los detalles del evento:",
+            pasado ? "¿Quieres ver los próximos eventos?" : "¿Quieres ver otros eventos o saber cómo llegar?");
+    }
+
+    private static ResultadoChat FichaEvento(EventoResumen e) =>
+        new(e.IdEvento, e.Titulo, "Evento", e.Resumen)
+        {
+            Subtitulo = $"{TextoFechaEvento(e.FechaInicio, e.FechaFin)} · {e.Tipo}",
+            Imagen = SitioPublico.UrlSegura(e.ImagenUrl),
+            Icono = "fa-calendar-alt",
+            Url = $"/Sitio/Evento/{e.IdEvento}"
+        };
+
+    // "sábado 17 de octubre, 10:00 a. m." o "del 17 al 18 de octubre"
+    private static string TextoFechaEvento(DateTime inicio, DateTime? fin)
+    {
+        var cultura = CultureInfo.CurrentCulture;
+        var anio = inicio.Year != DateTime.Today.Year ? $" de {inicio.Year}" : "";
+
+        if (fin is { } f && f.Date != inicio.Date)
+        {
+            return f.Month == inicio.Month
+                ? $"del {inicio.Day} al {f.Day} de {f.ToString("MMMM", cultura)}{anio}"
+                : $"del {inicio.ToString("d 'de' MMMM", cultura)} al {f.ToString("d 'de' MMMM", cultura)}{anio}";
+        }
+
+        var texto = inicio.ToString("dddd d 'de' MMMM", cultura) + anio;
+        return inicio.TimeOfDay == TimeSpan.Zero ? texto : $"{texto}, {inicio.ToString("h:mm tt", cultura)}";
+    }
+
+    // ------------------------------------------------------------------ datos curiosos
+
+    private Task<List<DatoCurioso>> DatosCuriososAsync(CancellationToken ct) =>
+        _context.DatosCuriosos.AsNoTracking().Where(d => d.Activo).ToListAsync(ct);
+
+    // El dato que mejor coincide con el tema de la pregunta (DelTema = true) o, si ninguno coincide, uno al azar.
+    // Prefiere los que todavía no se contaron en la conversación.
+    private static (DatoCurioso? Dato, bool DelTema) ElegirDato(List<DatoCurioso> datos, List<string> tema, HashSet<int> mostrados)
+    {
+        if (datos.Count == 0)
+            return (null, false);
+
+        var nuevos = datos.Where(d => !mostrados.Contains(d.IdDato)).ToList();
+        if (nuevos.Count == 0)
+            nuevos = datos;
+
+        if (tema.Count > 0)
+        {
+            var mejor = nuevos
+                .Select(d => (Dato: d, Puntos: TextoChat.Coincidencias(tema, d.Texto + " " + d.Categoria)))
+                .Where(x => x.Puntos > 0)
+                .OrderByDescending(x => x.Puntos).ThenBy(_ => Random.Shared.Next())
+                .FirstOrDefault();
+            if (mejor.Dato is not null)
+                return (mejor.Dato, true);
+        }
+
+        return (nuevos[Random.Shared.Next(nuevos.Count)], false);
+    }
+
+    private async Task ContarDatoCuriosoAsync(ConsultaChat c, RespuestaChat r, List<FichaResumen> fichas, CancellationToken ct)
+    {
+        var datos = await DatosCuriososAsync(ct);
+        var mostrados = c.Contexto.DatosMostrados;
+        if (datos.All(d => mostrados.Contains(d.IdDato)))
+            mostrados.Clear();   // ya se contaron todos: se empieza otra vuelta
+
+        var tema = TextoChat.PalabrasTema(c.Normalizado);
+        var (dato, delTema) = ElegirDato(datos, tema, mostrados);
+        if (dato is null)
+        {
+            Responder(r, TiposRespuesta.SinResultados, "Todavía no tengo datos curiosos registrados.");
+            return;
+        }
+
+        ResponderDato(c, r, fichas, dato, tema.Count > 0 && !delTema ? "No tengo un dato sobre eso, pero aquí va otro. " : "Dato curioso: ");
+    }
+
+    // Si todas las palabras distintivas de la pregunta están en un dato curioso, responde con él
+    private async Task<bool> ResponderConDatoAsync(ConsultaChat c, RespuestaChat r, List<FichaResumen> fichas, CancellationToken ct)
+    {
+        var tema = TextoChat.PalabrasDistintivas(c.Normalizado);
+        if (tema.Count == 0)
+            return false;
+
+        var dato = (await DatosCuriososAsync(ct))
+            .Where(d => TextoChat.Coincidencias(tema, d.Texto) == tema.Count)
+            .OrderBy(d => c.Contexto.DatosMostrados.Contains(d.IdDato))
+            .FirstOrDefault();
+        if (dato is null)
+            return false;
+
+        r.Intencion = NombresIntencion.DatoCurioso;
+        ResponderDato(c, r, fichas, dato, "Dato curioso: ");
+        return true;
+    }
+
+    private static void ResponderDato(ConsultaChat c, RespuestaChat r, List<FichaResumen> fichas, DatoCurioso dato, string introduccion)
+    {
+        c.Contexto.DatosMostrados.Add(dato.IdDato);
+        var texto = new StringBuilder(introduccion).Append(dato.Texto.Trim());
+        if (!string.IsNullOrWhiteSpace(dato.Fuente))
+            texto.Append("\n\nFuente: " + dato.Fuente.Trim());
+
+        r.Sugerencias.Add("Otro dato curioso");
+        // Si el dato nombra un lugar turístico registrado, se ofrece su información
+        if (TextoChat.BuscarPorNombre(TextoChat.Normalizar(dato.Texto), fichas.Where(f => !f.Ref.EsPrestador), f => f.Nombre) is { } lugar)
+            r.Sugerencias.Add($"Háblame de {lugar.Nombre}");
+
+        var detalle = new DetalleChat
+        {
+            Clase = "dato",
+            Titulo = "¿Sabías que…?",
+            Subtitulo = dato.Categoria,
+            Icono = "fa-lightbulb",
+            Resumen = dato.Texto.Trim()
+        };
+        // La fuente es un enlace si es una dirección web; si no, se muestra como texto
+        if (SitioPublico.UrlSegura(dato.Fuente) is { } fuente && fuente.StartsWith("http"))
+            Accion(detalle, "enlace", "Ver la fuente", fuente);
+        else
+            Dato(detalle, "fa-book", "Fuente", dato.Fuente);
+
+        r.Detalle = detalle;
+        r.TextoCorto = introduccion.StartsWith("No tengo") ? introduccion.Trim() : "Aquí tienes un dato curioso:";
+        Responder(r, TiposRespuesta.Conversacional, texto.ToString());
+    }
+
+    // ------------------------------------------------------------------ tarjetas de detalle
+
+    private static void Dato(DetalleChat d, string icono, string etiqueta, string? valor)
+    {
+        if (!string.IsNullOrWhiteSpace(valor))
+            d.Datos.Add(new DatoDetalle(icono, etiqueta, valor.Trim()));
+    }
+
+    private static void Seccion(DetalleChat d, string? titulo, string? texto, int maximo = 600)
+    {
+        if (!string.IsNullOrWhiteSpace(texto))
+            d.Secciones.Add(new SeccionDetalle(titulo, TextoChat.Recortar(texto, maximo)));
+    }
+
+    private static void Accion(DetalleChat d, string tipo, string texto, string? url)
+    {
+        if (url != null)
+            d.Acciones.Add(new AccionDetalle(tipo, texto, url));
+    }
+
+    // Texto completo de la tarjeta: se guarda en ConsultasAsistente y es lo que se lee si la tarjeta no se dibuja
+    private static string TextoDeDetalle(DetalleChat d, string? cierre)
+    {
+        var texto = new StringBuilder(d.Subtitulo != null && d.Clase is "lugar" or "prestador" or "evento"
+            ? $"{d.Titulo} — {d.Subtitulo}"
+            : d.Titulo).AppendLine();
+
+        if (d.Resumen != null)
+            texto.AppendLine(d.Resumen);
+        foreach (var s in d.Secciones.Where(s => s.Titulo == null))
+            texto.AppendLine(s.Texto);
+
+        var lineas = new List<string>();
+        if (d.Origen != null || d.Destino != null)
+            lineas.Add($"Recorrido: {d.Origen ?? "—"} → {d.Destino ?? "—"}");
+        lineas.AddRange(d.Datos.Select(x => $"{x.Etiqueta}: {x.Valor}"));
+        lineas.AddRange(d.Acciones.Where(a => a.Tipo is "mapa" or "enlace").Select(a => $"{a.Texto}: {a.Url}"));
+        if (lineas.Count > 0)
+            texto.AppendLine().AppendLine(string.Join("\n", lineas.Select(l => "• " + l)));
+
+        foreach (var s in d.Secciones.Where(s => s.Titulo != null))
+            texto.AppendLine().AppendLine($"{s.Titulo}: {s.Texto}");
+
+        if (cierre != null)
+            texto.AppendLine().Append(cierre);
+        return texto.ToString().Trim();
+    }
+
+    private static void ResponderDetalle(RespuestaChat r, DetalleChat d, string textoCorto, string? cierre)
+    {
+        r.Detalle = d;
+        r.TextoCorto = textoCorto;
+        Responder(r, TiposRespuesta.Datos, TextoDeDetalle(d, cierre), limpiarResultados: false);
+    }
+
+    private static string? Coordenadas(decimal? latitud, decimal? longitud) =>
+        latitud.HasValue && longitud.HasValue
+            ? $"{latitud.Value.ToString("0.######", Invariante)},{longitud.Value.ToString("0.######", Invariante)}"
+            : null;
+
+    private static string? EnlaceMapa(decimal? latitud, decimal? longitud) =>
+        Coordenadas(latitud, longitud) is { } punto ? "https://www.google.com/maps?q=" + punto : null;
+
+    // Indicaciones de Google Maps de un lugar a otro (o solo hasta el destino)
+    private static string? EnlaceIndicaciones(string? origen, string? destino) =>
+        destino is null ? null
+            : "https://www.google.com/maps/dir/?api=1" + (origen != null ? "&origin=" + origen : "") + "&destination=" + destino;
+
+    private static string IconoTransporte(string? transporte)
+    {
+        var t = TextoChat.Normalizar(transporte ?? "");
+        return t.Contains("bote") || t.Contains("lancha") ? "fa-ship"
+            : t.Contains("moto") ? "fa-motorcycle"
+            : t.Contains("guagua") || t.Contains("autobus") ? "fa-bus"
+            : t.Contains("caminata") || t.Contains("pie") || t.Contains("sendero") ? "fa-walking"
+            : "fa-car";
     }
 
     // ------------------------------------------------------------------ respuesta de listas
@@ -1347,7 +1885,11 @@ public class ChatbotService
             x.IdRuta, x.Nombre, x.Descripcion, x.IdLugarOrigen, x.IdLugarDestino,
             x.LugarOrigen != null ? x.LugarOrigen.Nombre : null,
             x.LugarDestino != null ? x.LugarDestino.Nombre : null,
-            x.DistanciaKilometros, x.DuracionMinutos, x.NivelDificultad, x.TipoTransporte, x.Instrucciones));
+            x.DistanciaKilometros, x.DuracionMinutos, x.NivelDificultad, x.TipoTransporte, x.Instrucciones,
+            x.LugarOrigen != null ? x.LugarOrigen.Latitud : null,
+            x.LugarOrigen != null ? x.LugarOrigen.Longitud : null,
+            x.LugarDestino != null ? x.LugarDestino.Latitud : null,
+            x.LugarDestino != null ? x.LugarDestino.Longitud : null));
 
     private async Task<long?> RegistrarConsultaAsync(string mensaje, RespuestaChat respuesta, int milisegundos)
     {
@@ -1400,6 +1942,7 @@ public class ChatbotService
         Dominio.Alojamiento => NombresIntencion.ConsultarAlojamiento,
         Dominio.Restaurante => NombresIntencion.ConsultarRestaurante,
         Dominio.Ruta => NombresIntencion.ConsultarRuta,
+        Dominio.Evento => NombresIntencion.BuscarEvento,
         _ => NombresIntencion.ConsultarAtractivo
     };
 
@@ -1411,6 +1954,7 @@ public class ChatbotService
         Dominio.Guia => "guías turísticos",
         Dominio.Servicio => "servicios",
         Dominio.Ruta => "rutas",
+        Dominio.Evento => "eventos",
         _ => "atractivos"
     };
 
@@ -1452,12 +1996,6 @@ public class ChatbotService
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => separador.StartsWith('.') ? p!.Trim().TrimEnd('.') : p!.Trim()));
 
-    private static void Agregar(List<string> lista, string etiqueta, string? valor)
-    {
-        if (!string.IsNullOrWhiteSpace(valor))
-            lista.Add($"{etiqueta}: {valor.Trim()}");
-    }
-
     private static string? Truncar(string? texto, int maximo) =>
         texto is null || texto.Length <= maximo ? texto : texto[..maximo];
 
@@ -1493,7 +2031,12 @@ public class ChatbotService
 
     private sealed record RutaResumen(int IdRuta, string Nombre, string? Descripcion, int? IdLugarOrigen, int? IdLugarDestino,
         string? Origen, string? Destino, decimal? DistanciaKilometros, int? DuracionMinutos, string? NivelDificultad,
-        string? TipoTransporte, string? Instrucciones);
+        string? TipoTransporte, string? Instrucciones,
+        decimal? OrigenLatitud, decimal? OrigenLongitud, decimal? DestinoLatitud, decimal? DestinoLongitud);
+
+    // Lugar: nombre del lugar registrado o el texto libre del evento
+    private sealed record EventoResumen(int IdEvento, string Titulo, string Tipo, string? Resumen, DateTime FechaInicio,
+        DateTime? FechaFin, int? IdLugar, string? Lugar, string? ImagenUrl);
 
     private sealed record ElementoLista(RefFicha Ref, string Nombre, string? Detalle, decimal? Precio, double? DistanciaKm = null)
     {
