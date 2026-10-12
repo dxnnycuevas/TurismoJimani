@@ -1,0 +1,42 @@
+@* Selector de idioma del sitio público. Español es el original; inglés, francés y criollo haitiano
+   los traduce automáticamente el traductor de Google (sitio/js/idioma.js). Para otros idiomas,
+   el traductor del propio navegador. "notranslate" evita que se traduzcan los nombres de los idiomas. *@
+@{
+    // (código, nombre en su propio idioma, título de la bandera)
+    var idiomas = new[]
+    {
+        ("es", "Español", "República Dominicana"),
+        ("en", "English", "Estados Unidos"),
+        ("fr", "Français", "Francia"),
+        ("ht", "Kreyòl ayisyen", "Haití")
+    };
+}
+
+<div class="dropdown jm-idioma notranslate" translate="no">
+    <button type="button" class="jm-idioma__boton" data-bs-toggle="dropdown" aria-expanded="false"
+            aria-label="Cambiar idioma / Change language" title="Idioma · Language · Langue · Lang">
+        <i class="fa fa-globe-americas" aria-hidden="true"></i>
+        <span class="jm-idioma__codigo" data-idioma-actual>ES</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end jm-idioma__menu">
+        <li><h6 class="dropdown-header">Idioma · Language</h6></li>
+        @foreach (var (codigo, nombre, pais) in idiomas)
+        {
+            <li>
+                <button type="button" class="dropdown-item jm-idioma__opcion" data-idioma="@codigo" lang="@codigo">
+                    <partial name="_BanderaIdioma" model="codigo" />
+                    <span>@nombre</span>
+                    <i class="fa fa-check jm-idioma__marca" aria-hidden="true"></i>
+                </button>
+            </li>
+        }
+        <li><hr class="dropdown-divider" /></li>
+        <li>
+            <p class="jm-idioma__nota mb-0">
+                <i class="fa fa-language me-1" aria-hidden="true"></i>
+                ¿Otro idioma? Use el traductor de su navegador.<br />
+                <span lang="en">Other language? Use your browser's translator.</span>
+            </p>
+        </li>
+    </ul>
+</div>

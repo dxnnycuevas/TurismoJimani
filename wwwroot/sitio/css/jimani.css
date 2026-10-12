@@ -313,7 +313,10 @@ body.jm {
 /* ---------------------------------------------------------------------
    Barra superior y navegación
    --------------------------------------------------------------------- */
+/* Por encima de la navegación fija (1030) para que sus menús desplegables (idioma) no queden debajo */
 .jm-topbar {
+    position: relative;
+    z-index: 1031;
     background: var(--azul-900);
     color: rgba(255, 255, 255, .85);
     font-size: .85rem;
@@ -1339,4 +1342,95 @@ body.chat-grande-abierto { overflow: hidden; }
         transition-duration: .01ms !important;
     }
     .jm-js .jm-revelar { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------------------
+   Selector de idioma (traductor de Google para inglés, francés y criollo)
+   --------------------------------------------------------------------- */
+.jm-idioma__boton {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .7rem;
+    border: 1px solid rgba(29, 90, 140, .25);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .75);
+    color: var(--azul-900);
+    font-size: .85rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.jm-idioma__boton:hover,
+.jm-idioma__boton:focus-visible { background: #fff; border-color: var(--azul-600); }
+.jm-idioma__boton .fa { color: var(--azul-600); font-size: 1rem; }
+
+/* En la barra superior (azul oscuro) el botón es claro y más pequeño */
+.jm-topbar .jm-idioma__boton {
+    padding: .25rem .6rem;
+    border-color: rgba(255, 255, 255, .3);
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font-size: .8rem;
+}
+
+.jm-topbar .jm-idioma__boton:hover,
+.jm-topbar .jm-idioma__boton:focus-visible { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .6); }
+.jm-topbar .jm-idioma__boton .fa { color: var(--naranja-300); }
+.jm-topbar .jm-idioma__menu { font-size: .9rem; }
+
+.jm-idioma__menu { min-width: 15rem; padding: .4rem; border-radius: 14px; }
+
+.jm-idioma__opcion {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .65rem;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.jm-idioma__marca { margin-left: auto; color: var(--azul-600); visibility: hidden; }
+.jm-idioma__opcion.activo { font-weight: 700; background: var(--azul-50); }
+.jm-idioma__opcion.activo .jm-idioma__marca { visibility: visible; }
+
+.jm-bandera {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 16px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .12);
+}
+
+.jm-idioma__nota { padding: .25rem .65rem; font-size: .75rem; line-height: 1.4; color: var(--texto-suave); }
+
+/* Se oculta la barra y los avisos del traductor de Google (el selector propio la reemplaza) */
+.skiptranslate > iframe,
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-tooltip,
+#traductor-google { display: none !important; }
+
+body.jm { top: 0 !important; }
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
+
+/* Traducido (inglés, francés o criollo) los textos son más largos: el menú se compacta
+   y el botón del asistente queda solo con su icono para que todo quepa en una línea */
+@media (min-width: 992px) {
+    html.translated-ltr .jm-nav .navbar-nav .nav-link { padding: .5rem .45rem !important; font-size: .86rem; }
+    html.translated-ltr .jm-nav .jm-btn--sm > span { display: none !important; }
+}
+
+/* Teléfonos: logo, idioma y botón del menú en una sola línea */
+@media (max-width: 575.98px) {
+    .jm-nav .jm-marca { gap: .45rem; font-size: 1.1rem; }
+    .jm-nav .jm-marca__icono { width: 38px; height: 38px; }
+    .jm-nav .jm-marca small { font-size: .58rem; letter-spacing: .08em; }
+    .jm-nav .jm-idioma__boton { padding: .4rem .55rem; }
+}
+
+@media (max-width: 359.98px) {
+    .jm-nav .jm-idioma__codigo { display: none; }
 }

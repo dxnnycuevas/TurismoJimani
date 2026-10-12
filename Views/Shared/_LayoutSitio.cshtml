@@ -73,6 +73,7 @@
                     <a asp-controller="Cuenta" asp-action="Registro"><i class="fa fa-user-plus me-2"></i>Registrarse</a>
                     <a asp-controller="Cuenta" asp-action="Ingresar"><i class="fa fa-sign-in-alt me-2"></i>Iniciar sesión</a>
                 }
+                <partial name="_SelectorIdioma" />
             </div>
         </div>
     </div>
@@ -81,11 +82,14 @@
     <header class="jm-nav">
         <div class="container">
             <nav class="navbar navbar-expand-lg jm-vidrio" aria-label="Principal">
-                <a asp-controller="Sitio" asp-action="Index" class="jm-marca me-lg-4">
+                <a asp-controller="Sitio" asp-action="Index" class="jm-marca me-lg-4 notranslate" translate="no">
                     <span class="jm-marca__icono"><svg aria-hidden="true"><use href="#t-carita" /></svg></span>
                     <span>Turismo Jimaní<small>Independencia · RD</small></span>
                 </a>
-                <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#menuSitio"
+                <div class="ms-auto me-2 d-lg-none">
+                    <partial name="_SelectorIdioma" />
+                </div>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuSitio"
                         aria-controls="menuSitio" aria-expanded="false" aria-label="Mostrar menú">
                     <i class="fa fa-bars"></i>
                 </button>
@@ -270,6 +274,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/sitio/js/jimani.js" asp-append-version="true"></script>
+    <script src="~/sitio/js/idioma.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

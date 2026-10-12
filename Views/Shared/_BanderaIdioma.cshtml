@@ -1,0 +1,44 @@
+@* Bandera pequeña (SVG simplificado, sin escudos) para el selector de idioma *@
+@model string
+
+@switch (Model)
+{
+    case "es":
+        @* República Dominicana *@
+        <svg class="jm-bandera" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+            <rect width="30" height="20" fill="#fff" />
+            <rect width="12.5" height="7.5" fill="#002d62" />
+            <rect x="17.5" width="12.5" height="7.5" fill="#ce1126" />
+            <rect y="12.5" width="12.5" height="7.5" fill="#ce1126" />
+            <rect x="17.5" y="12.5" width="12.5" height="7.5" fill="#002d62" />
+        </svg>
+        break;
+    case "en":
+        @* Estados Unidos (franjas y cantón, sin estrellas) *@
+        <svg class="jm-bandera" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+            <rect width="30" height="20" fill="#fff" />
+            @for (var i = 0; i < 7; i++)
+            {
+                <rect y="@((i * 2 * 20.0 / 13).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" width="30"
+                      height="@((20.0 / 13).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" fill="#b22234" />
+            }
+            <rect width="13" height="10.77" fill="#3c3b6e" />
+        </svg>
+        break;
+    case "fr":
+        @* Francia *@
+        <svg class="jm-bandera" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+            <rect width="10" height="20" fill="#0055a4" />
+            <rect x="10" width="10" height="20" fill="#fff" />
+            <rect x="20" width="10" height="20" fill="#ef4135" />
+        </svg>
+        break;
+    case "ht":
+        @* Haití *@
+        <svg class="jm-bandera" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
+            <rect width="30" height="10" fill="#00209f" />
+            <rect y="10" width="30" height="10" fill="#d21034" />
+            <rect x="11" y="6.5" width="8" height="7" fill="#fff" />
+        </svg>
+        break;
+}
