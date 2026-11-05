@@ -80,6 +80,7 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/panel.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ver-contrasena.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AppDonnyCuevas20210074.styles.css" asp-append-version="true" />
 </head>
 <body class="@(esPersonal ? "panel" : "")">
@@ -155,6 +156,7 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                             <li><h6 class="dropdown-header">@nombreUsuario</h6></li>
                             <li><a class="dropdown-item" asp-controller="Sitio" asp-action="Index" target="_blank"><i class="fa fa-globe-americas fa-fw me-2" aria-hidden="true"></i>Ver sitio público</a></li>
+                            <li><a class="dropdown-item" asp-controller="Cuenta" asp-action="CambiarContrasena"><i class="fa fa-key fa-fw me-2" aria-hidden="true"></i>Cambiar contraseña</a></li>
                             <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <form asp-controller="Cuenta" asp-action="Logout" method="post" class="m-0">
@@ -219,6 +221,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/ver-contrasena.js" asp-append-version="true"></script>
     @if (esPersonal)
     {
         <script src="~/js/panel.js" asp-append-version="true"></script>

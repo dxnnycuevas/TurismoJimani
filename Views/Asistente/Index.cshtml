@@ -57,7 +57,9 @@
                             <form id="chat-formulario" class="jm-buscador jm-vidrio m-0 mw-100" autocomplete="off"
                                   data-url-enviar="@Url.Action("EnviarMensaje", "Asistente")"
                                   data-url-estado="@Url.Action("Estado", "Asistente")"
-                                  data-mostrar-detalle="false">
+                                  data-mostrar-detalle="false"
+                                  data-url-guardar-plan="@(SesionVisitante.IdUsuario(User) != null ? Url.Action("GuardarPlan", "Perfil") : null)"
+                                  data-url-ingresar="@(User.Identity?.IsAuthenticated == true ? null : Url.Action("Ingresar", "Cuenta", new { returnUrl = Url.Action("Index", "Asistente") }))">
                                 <i class="fa fa-comments text-danger" aria-hidden="true"></i>
                                 <input id="chat-texto" maxlength="500" placeholder="Escribe tu pregunta…" aria-label="Mensaje" />
                                 <button id="chat-enviar" type="submit" class="jm-btn"><i class="fa fa-paper-plane"></i>Enviar</button>

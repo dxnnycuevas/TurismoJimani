@@ -1,11 +1,12 @@
 {
-  "fecha": "2026-10-05T12:08:48",
+  "fecha": "2026-10-05T14:43:55",
   "modeloBase": "dccuchile/bert-base-spanish-wwm-uncased",
   "intenciones": [
     "Agradecimiento",
     "Ayuda",
     "BuscarAlojamiento",
     "BuscarAtractivo",
+    "BuscarEvento",
     "BuscarGuia",
     "BuscarRestaurante",
     "BuscarRuta",
@@ -15,6 +16,7 @@
     "ConsultarAtractivo",
     "ConsultarRestaurante",
     "ConsultarRuta",
+    "DatoCurioso",
     "Despedida",
     "FueraDeAlcance",
     "PlanificarViaje",
@@ -25,6 +27,7 @@
     "Ayuda": 18,
     "BuscarAlojamiento": 49,
     "BuscarAtractivo": 48,
+    "BuscarEvento": 45,
     "BuscarGuia": 45,
     "BuscarRestaurante": 47,
     "BuscarRuta": 50,
@@ -34,71 +37,94 @@
     "ConsultarAtractivo": 63,
     "ConsultarRestaurante": 40,
     "ConsultarRuta": 31,
+    "DatoCurioso": 28,
     "Despedida": 15,
     "FueraDeAlcance": 37,
     "PlanificarViaje": 25,
     "Saludo": 21
   },
-  "exactitudValidacion": 0.9184,
+  "exactitudValidacion": 0.8899,
   "exactitudPorIntencion": {
     "Agradecimiento": 1.0,
     "Ayuda": 0.667,
-    "BuscarAlojamiento": 0.857,
+    "BuscarAlojamiento": 1.0,
     "BuscarAtractivo": 1.0,
+    "BuscarEvento": 0.714,
     "BuscarGuia": 1.0,
-    "BuscarRestaurante": 0.857,
-    "BuscarRuta": 0.875,
-    "BuscarServicio": 0.857,
-    "BuscarTransporte": 1.0,
-    "ConsultarAlojamiento": 0.857,
-    "ConsultarAtractivo": 1.0,
-    "ConsultarRestaurante": 1.0,
+    "BuscarRestaurante": 1.0,
+    "BuscarRuta": 0.75,
+    "BuscarServicio": 1.0,
+    "BuscarTransporte": 0.75,
+    "ConsultarAlojamiento": 1.0,
+    "ConsultarAtractivo": 0.889,
+    "ConsultarRestaurante": 0.833,
     "ConsultarRuta": 1.0,
-    "Despedida": 0.5,
-    "FueraDeAlcance": 1.0,
-    "PlanificarViaje": 0.75,
+    "DatoCurioso": 0.5,
+    "Despedida": 1.0,
+    "FueraDeAlcance": 0.833,
+    "PlanificarViaje": 1.0,
     "Saludo": 1.0
   },
   "erroresValidacion": [
     {
-      "texto": "necesito ayuda",
+      "texto": "¿qué información tienes?",
       "esperada": "Ayuda",
-      "predicha": "BuscarServicio"
+      "predicha": "FueraDeAlcance"
     },
     {
-      "texto": "¿cuáles son los hoteles más baratos?",
-      "esperada": "BuscarAlojamiento",
-      "predicha": "ConsultarAlojamiento"
+      "texto": "¿hay alguna promoción en hoteles?",
+      "esperada": "BuscarEvento",
+      "predicha": "BuscarAlojamiento"
     },
     {
-      "texto": "quiero un plato del día",
-      "esperada": "BuscarRestaurante",
-      "predicha": "ConsultarRestaurante"
+      "texto": "¿dónde será el recorrido al amanecer?",
+      "esperada": "BuscarEvento",
+      "predicha": "BuscarRuta"
     },
     {
-      "texto": "¿hay algún recorrido guiado?",
+      "texto": "¿cómo se va a el mercado binacional?",
       "esperada": "BuscarRuta",
-      "predicha": "BuscarGuia"
-    },
-    {
-      "texto": "quiero comprar un celular",
-      "esperada": "BuscarServicio",
       "predicha": "BuscarTransporte"
     },
     {
-      "texto": "¿cuál es el más caro?",
-      "esperada": "ConsultarAlojamiento",
-      "predicha": "ConsultarRestaurante"
+      "texto": "dame direcciones",
+      "esperada": "BuscarRuta",
+      "predicha": "BuscarServicio"
     },
     {
-      "texto": "cuídate",
-      "esperada": "Despedida",
-      "predicha": "Saludo"
+      "texto": "¿qué autobús tomo desde la capital?",
+      "esperada": "BuscarTransporte",
+      "predicha": "BuscarRuta"
     },
     {
-      "texto": "tengo RD$ 20,000, ¿cuántos días puedo quedarme?",
-      "esperada": "PlanificarViaje",
-      "predicha": "BuscarAlojamiento"
+      "texto": "¿cómo puedo moverme entre los atractivos?",
+      "esperada": "BuscarTransporte",
+      "predicha": "BuscarAtractivo"
+    },
+    {
+      "texto": "¿cómo es Las Caritas?",
+      "esperada": "ConsultarAtractivo",
+      "predicha": "DatoCurioso"
+    },
+    {
+      "texto": "¿a qué hora abren?",
+      "esperada": "ConsultarRestaurante",
+      "predicha": "BuscarEvento"
+    },
+    {
+      "texto": "¿de dónde viene el nombre del Lago Enriquillo?",
+      "esperada": "DatoCurioso",
+      "predicha": "ConsultarAtractivo"
+    },
+    {
+      "texto": "¿por qué el lago es salado?",
+      "esperada": "DatoCurioso",
+      "predicha": "ConsultarAtractivo"
+    },
+    {
+      "texto": "¿cómo hago un pastel?",
+      "esperada": "FueraDeAlcance",
+      "predicha": "BuscarRestaurante"
     }
   ],
   "parametros": {

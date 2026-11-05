@@ -1,5 +1,9 @@
 @* Tarjeta de una ruta turística (origen → destino, distancia, duración y dificultad) *@
 @model Ruta
+@{
+    var urlMapaRuta = SitioPublico.UrlMapaRuta(Model.LugarOrigen?.Latitud, Model.LugarOrigen?.Longitud,
+        Model.LugarDestino?.Latitud, Model.LugarDestino?.Longitud, Model.TipoTransporte);
+}
 <div class="ruta-item jm-vidrio jm-liquido">
     <div class="d-flex align-items-center gap-3 mb-3">
         <span class="ruta-icono flex-shrink-0"><i class="fa fa-route"></i></span>
@@ -50,6 +54,15 @@
             <span class="ruta-dato"><i class="fa fa-car"></i>@Model.TipoTransporte</span>
         }
     </div>
+    @if (urlMapaRuta != null)
+    {
+        <details class="mt-3">
+            <summary>Ver el recorrido en el mapa</summary>
+            <div class="lugar-mapa mt-2">
+                <iframe src="@urlMapaRuta" title="Recorrido de @Model.Nombre" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </details>
+    }
     @if (!string.IsNullOrWhiteSpace(Model.Instrucciones))
     {
         <details class="mt-3">

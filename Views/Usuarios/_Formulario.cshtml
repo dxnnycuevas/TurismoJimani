@@ -45,6 +45,7 @@
     <div class="col-md-6">
         <label for="Contrasena" class="form-label">@(Model.IdUsuario == 0 ? "Contraseña" : "Nueva contraseña")</label>
         <input type="password" id="Contrasena" name="Contrasena" class="form-control" autocomplete="new-password" />
+        <div class="form-text">@PoliticaContrasena.TextoAyuda</div>
         @Html.ValidationMessage("Contrasena", new { @class = "text-danger small" })
     </div>
 

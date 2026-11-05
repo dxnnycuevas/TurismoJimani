@@ -82,7 +82,7 @@
         <label for="fotos" class="form-label">Subir fotos (puede elegir varias a la vez)</label>
         <input type="file" id="fotos" name="fotos" class="form-control" multiple accept="@AlmacenImagenes.ExtensionesAceptadas" />
         <div class="form-text">
-            JPG, PNG, WEBP o GIF de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB cada una.
+            @AlmacenImagenes.FormatosAceptadosTexto de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB cada una.
             @if (totalFotos > 0)
             {
                 <span>Ya tiene @totalFotos foto(s); las nuevas se agregan al álbum. Para cambiar la portada o quitar fotos use la ficha del prestador.</span>

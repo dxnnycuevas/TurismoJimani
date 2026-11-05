@@ -15,6 +15,32 @@
         <dd class="col-sm-8">@Model.Correo</dd>
         <dt class="col-sm-4">Rol</dt>
         <dd class="col-sm-8">@Model.Rol?.Nombre</dd>
+        @if (Model.TipoCuenta != null)
+        {
+            <dt class="col-sm-4">Tipo de cuenta</dt>
+            <dd class="col-sm-8">@Model.TipoCuenta</dd>
+            @if (Model.NombreEmpresa != null)
+            {
+                <dt class="col-sm-4">Empresa</dt>
+                <dd class="col-sm-8">@Model.NombreEmpresa</dd>
+            }
+            <dt class="col-sm-4">Documento</dt>
+            <dd class="col-sm-8">@Model.TipoDocumento: @Model.NumeroDocumento</dd>
+            <dt class="col-sm-4">Teléfono</dt>
+            <dd class="col-sm-8">@Model.Telefono</dd>
+            @if (Model.FechaNacimiento.HasValue)
+            {
+                <dt class="col-sm-4">Fecha de nacimiento</dt>
+                <dd class="col-sm-8">@Model.FechaNacimiento.Value.ToString("dd/MM/yyyy")</dd>
+            }
+            @if (Model.Nacionalidad != null)
+            {
+                <dt class="col-sm-4">Nacionalidad</dt>
+                <dd class="col-sm-8">@Model.Nacionalidad</dd>
+            }
+            <dt class="col-sm-4">Ubicación</dt>
+            <dd class="col-sm-8">@string.Join(", ", new[] { Model.Direccion, Model.Ciudad, Model.Pais }.Where(x => x != null))</dd>
+        }
         <dt class="col-sm-4">Activo</dt>
         <dd class="col-sm-8">@Formato.SiNo(Model.Activo)</dd>
         <dt class="col-sm-4">Fecha de creación</dt>

@@ -431,4 +431,15 @@ public class SitioController : Controller
     {
         return View();
     }
+
+    // GET: /Sitio/Estado/404
+    // Página que muestra UseStatusCodePagesWithReExecute (Program.cs) cuando una respuesta GET
+    // termina con un código de error sin contenido, por ejemplo un lugar que no existe (PF-03).
+    // El código de estado original (404, 403...) se conserva.
+    [Route("Sitio/Estado/{codigo:int}")]
+    public IActionResult Estado(int codigo)
+    {
+        ViewBag.Codigo = codigo;
+        return View("NoEncontrado");
+    }
 }

@@ -32,5 +32,12 @@ namespace AppDonnyCuevas20210074.Models
         public int? TiempoRespuestaMilisegundos { get; set; }
 
         public DateTime FechaConsulta { get; set; } = DateTime.Now;
+
+        // Visitante que hizo la consulta con su sesión iniciada; null si fue anónima o del personal.
+        // Le permite ver y borrar su historial desde Mi perfil.
+        public int? IdUsuario { get; set; }
+
+        [ForeignKey(nameof(IdUsuario))]
+        public virtual Usuario? Usuario { get; set; }
     }
 }

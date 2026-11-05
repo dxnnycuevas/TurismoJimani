@@ -1,8 +1,9 @@
 """Conexión a SQL Server para el entrenamiento.
 
-La cadena de conexión se toma de ../appsettings.json (ConnectionStrings:TurismoJimani),
-la misma que usa ASP.NET, y se convierte al formato ODBC. Se puede sobrescribir con la
-variable de entorno TURISMO_BD_ODBC.
+La cadena de conexión (ConnectionStrings:TurismoJimani) se busca como la busca ASP.NET:
+la variable de entorno ConnectionStrings__TurismoJimani, luego ../appsettings.{entorno}.json
+(Development si ASPNETCORE_ENVIRONMENT no está definida) y por último ../appsettings.json.
+Se convierte al formato ODBC. Se puede sobrescribir con la variable de entorno TURISMO_BD_ODBC.
 """
 import json
 import os
@@ -10,7 +11,7 @@ from pathlib import Path
 
 import pyodbc
 
-RUTA_APPSETTINGS = Path(__file__).resolve().parent.parent / "appsettings.json"
+CARPETA_APP = Path(__file__).resolve().parent.parent
 NOMBRE_CADENA = "TurismoJimani"
 
 
@@ -32,7 +33,7 @@ def _convertir_a_odbc(cadena_net: str) -> str:
     servidor = partes.get("server") or partes.get("data source")
     base = partes.get("database") or partes.get("initial catalog")
     if not servidor or not base:
-        raise RuntimeError("La cadena de conexión de appsettings.json no tiene Server/Database.")
+        raise RuntimeError("La cadena de conexión no tiene Server/Database.")
 
     odbc = [f"DRIVER={{{_elegir_driver()}}}", f"SERVER={servidor}", f"DATABASE={base}"]
 
@@ -53,9 +54,23 @@ def obtener_cadena() -> str:
     if os.environ.get("TURISMO_BD_ODBC"):
         return os.environ["TURISMO_BD_ODBC"]
 
-    with open(RUTA_APPSETTINGS, encoding="utf-8-sig") as archivo:
-        config = json.load(archivo)
-    return _convertir_a_odbc(config["ConnectionStrings"][NOMBRE_CADENA])
+    # Desde S-04 la cadena ya no está en appsettings.json: vive en appsettings.Development.json
+    # (desarrollo) o en una variable de entorno (servidor)
+    cadena = os.environ.get(f"ConnectionStrings__{NOMBRE_CADENA}")
+    entorno = os.environ.get("ASPNETCORE_ENVIRONMENT", "Development")
+    for nombre in (f"appsettings.{entorno}.json", "appsettings.json"):
+        if cadena:
+            break
+        ruta = CARPETA_APP / nombre
+        if ruta.exists():
+            with open(ruta, encoding="utf-8-sig") as archivo:
+                cadena = json.load(archivo).get("ConnectionStrings", {}).get(NOMBRE_CADENA)
+
+    if not cadena:
+        raise RuntimeError(
+            f"No se encontró ConnectionStrings:{NOMBRE_CADENA} en appsettings.{entorno}.json, appsettings.json "
+            f"ni en la variable de entorno ConnectionStrings__{NOMBRE_CADENA}.")
+    return _convertir_a_odbc(cadena)
 
 
 def conectar() -> pyodbc.Connection:

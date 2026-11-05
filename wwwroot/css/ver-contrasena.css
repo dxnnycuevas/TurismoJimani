@@ -1,0 +1,34 @@
+/* Botón con un ojo dentro de las casillas de contraseña (js/ver-contrasena.js) */
+.ver-contrasena-caja {
+    position: relative;
+    display: block;
+}
+
+.form-control.ver-contrasena-input {
+    padding-right: 2.75rem;
+}
+
+.ver-contrasena {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: calc(1.5em + .75rem + 2px);   /* alto de una casilla normal */
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #6b5646;
+    cursor: pointer;
+}
+
+.form-floating > .ver-contrasena {
+    height: 100%;
+}
+
+.ver-contrasena:hover,
+.ver-contrasena:focus-visible {
+    color: #1d5a8c;
+}

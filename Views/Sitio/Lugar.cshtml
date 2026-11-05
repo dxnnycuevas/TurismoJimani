@@ -238,6 +238,7 @@
                             <a href="@urlComoLlegar" target="_blank" rel="noopener" class="jm-btn"><i class="fa fa-directions"></i>Cómo llegar</a>
                         }
                         <a asp-action="Servicios" asp-route-grupo="@GruposPrestador.Guia" class="jm-btn jm-btn--contorno"><i class="fa fa-hiking"></i>Buscar un guía</a>
+                        <partial name="_BotonFavorito" model="(false, lugar.IdLugar)" />
                         <a asp-controller="Asistente" asp-action="Index" asp-route-pregunta="Háblame de @lugar.Nombre"
                            class="jm-btn jm-btn--contorno"><i class="fa fa-comments"></i>Preguntar al asistente</a>
                     </div>

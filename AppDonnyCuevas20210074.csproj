@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Secretos de desarrollo (cadena de conexión, contraseña inicial del administrador) fuera del repositorio: dotnet user-secrets -->
+    <UserSecretsId>turismojimani-f1d0628c-455a-4ce4-88d4-f2ec067b3296</UserSecretsId>
     <!-- El servicio BERT (Python) no forma parte de la compilación de ASP.NET -->
     <DefaultItemExcludes>$(DefaultItemExcludes);ServicioBert\**</DefaultItemExcludes>
   </PropertyGroup>

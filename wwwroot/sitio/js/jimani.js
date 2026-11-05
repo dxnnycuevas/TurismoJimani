@@ -165,4 +165,18 @@
     } else {
         contadores.forEach((el) => { el.textContent = el.dataset.contar; });
     }
+
+    // ---------- Confirmación antes de enviar (formularios con data-confirmar="mensaje") ----------
+    // Por ejemplo, borrar todo el historial del chat en Mi perfil.
+    document.addEventListener("submit", (evento) => {
+        const mensaje = evento.target instanceof HTMLFormElement ? evento.target.dataset.confirmar : null;
+        if (mensaje && !window.confirm(mensaje)) evento.preventDefault();
+    });
+
+    // ---------- Cerrar avisos (botón con data-cerrar-alerta) ----------
+    // Sustituye al onclick en línea, que la política CSP del sitio no permite.
+    document.addEventListener("click", (evento) => {
+        const boton = evento.target instanceof Element ? evento.target.closest("[data-cerrar-alerta]") : null;
+        boton?.closest(".container")?.remove();
+    });
 })();

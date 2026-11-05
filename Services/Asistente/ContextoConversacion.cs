@@ -44,6 +44,9 @@ public class ContextoConversacion
     // Plan de viaje en curso ("tengo 10000 pesos para 5 días"): se completa en varios mensajes
     public PlanViaje? Plan { get; set; }
 
+    // Último plan calculado y mostrado (lo guarda el visitante en Mi perfil)
+    public AppDonnyCuevas20210074.Models.Asistente.PresupuestoChat? UltimoPresupuesto { get; set; }
+
     // Eventos de la última lista mostrada
     public List<int> UltimosEventos { get; set; } = new();
 

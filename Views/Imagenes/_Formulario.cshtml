@@ -40,7 +40,7 @@
     <div class="col-md-6">
         <label for="archivo" class="form-label">Subir foto desde la PC</label>
         <input type="file" id="archivo" name="archivo" class="form-control" accept="@AlmacenImagenes.ExtensionesAceptadas" />
-        <div class="form-text">JPG, PNG, WEBP o GIF de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB.@(string.IsNullOrEmpty(Model.UrlImagen) ? "" : " Si sube una nueva, reemplaza la actual.")</div>
+        <div class="form-text">@AlmacenImagenes.FormatosAceptadosTexto de hasta @(AlmacenImagenes.TamanoMaximoBytes / (1024 * 1024)) MB.@(string.IsNullOrEmpty(Model.UrlImagen) ? "" : " Si sube una nueva, reemplaza la actual.")</div>
         <span class="text-danger small">@Html.ValidationMessage("archivo")</span>
     </div>
 

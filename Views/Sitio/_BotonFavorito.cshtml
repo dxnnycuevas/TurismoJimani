@@ -1,0 +1,30 @@
+@* Botón para guardar o quitar la ficha de Mis favoritos (perfil del visitante).
+   Sin sesión de visitante invita a iniciarla; el personal del panel no lo ve. *@
+@model (bool EsPrestador, int Id)
+@inject AppDonnyCuevas20210074.Data.TurismoJimaniContext Contexto
+@{
+    var idUsuario = SesionVisitante.IdUsuario(User);
+    var conectado = User.Identity?.IsAuthenticated == true;
+    var volver = Context.Request.Path + Context.Request.QueryString;
+}
+@if (idUsuario is int id)
+{
+    var guardado = Model.EsPrestador
+        ? Contexto.Favoritos.Any(f => f.IdUsuario == id && f.IdPrestador == Model.Id)
+        : Contexto.Favoritos.Any(f => f.IdUsuario == id && f.IdLugar == Model.Id);
+
+    <form asp-controller="Perfil" asp-action="Favorito" method="post" class="d-grid">
+        <input type="hidden" name="tipo" value="@(Model.EsPrestador ? "prestador" : "lugar")" />
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="hidden" name="returnUrl" value="@volver" />
+        <button type="submit" class="jm-btn @(guardado ? "jm-btn--azul" : "jm-btn--contorno")" aria-pressed="@(guardado ? "true" : "false")">
+            <i class="fa fa-heart"></i>@(guardado ? "Guardado en favoritos" : "Guardar en favoritos")
+        </button>
+    </form>
+}
+else if (!conectado)
+{
+    <a asp-controller="Cuenta" asp-action="Ingresar" asp-route-returnUrl="@volver" class="jm-btn jm-btn--contorno">
+        <i class="fa fa-heart"></i>Inicia sesión para guardarlo
+    </a>
+}

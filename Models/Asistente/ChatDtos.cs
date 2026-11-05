@@ -53,6 +53,9 @@ public class DetalleChat
     public string? Origen { get; set; }
     public string? Destino { get; set; }
 
+    // Mapa incrustado con el recorrido de la ruta
+    public string? MapaRuta { get; set; }
+
     // Bloque de calendario de un evento
     public FechaDetalle? Fecha { get; set; }
 
@@ -126,4 +129,8 @@ public record ResultadoChat(int Id, string Nombre, string Tipo, string? Detalle)
     public string? Telefono { get; init; }
 
     public bool Activo { get; init; } = true;
+
+    // Salida y llegada (solo en las rutas)
+    public string? Origen { get; init; }
+    public string? Destino { get; init; }
 }

@@ -53,7 +53,7 @@
                                 }
                                 <a asp-controller="Imagenes" asp-action="Edit" asp-route-id="@foto.IdImagen" class="btn btn-sm btn-outline-secondary" title="Editar descripción y créditos"><i class="fa fa-pen"></i></a>
                                 <form asp-controller="Imagenes" asp-action="Quitar" asp-route-id="@foto.IdImagen" method="post"
-                                      onsubmit="return confirm('¿Eliminar esta foto del álbum?');">
+                                      data-confirmar="¿Eliminar esta foto del álbum?">
                                     <input type="hidden" name="volver" value="@volver" />
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar foto"><i class="fa fa-trash"></i></button>
                                 </form>

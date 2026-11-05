@@ -27,10 +27,87 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="form-floating">
+                                    <select asp-for="TipoCuenta" id="tipo-cuenta" class="form-select">
+                                        <option value="@DocumentoIdentidad.CuentaPersona">Persona</option>
+                                        <option value="@DocumentoIdentidad.CuentaEmpresa">Empresa de viajes</option>
+                                    </select>
+                                    <label for="tipo-cuenta">Tipo de cuenta</label>
+                                </div>
+                                <span asp-validation-for="TipoCuenta" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12" data-solo="@DocumentoIdentidad.CuentaEmpresa">
+                                <div class="form-floating">
+                                    <input asp-for="NombreEmpresa" class="form-control" placeholder="Nombre de la empresa" autocomplete="organization" />
+                                    <label asp-for="NombreEmpresa"></label>
+                                </div>
+                                <span asp-validation-for="NombreEmpresa" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
                                     <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="name" />
-                                    <label asp-for="NombreCompleto"></label>
+                                    <label id="etiqueta-nombre" asp-for="NombreCompleto"></label>
                                 </div>
                                 <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-floating">
+                                    <select asp-for="TipoDocumento" id="tipo-documento" class="form-select">
+                                        <option value="@DocumentoIdentidad.Cedula">Cédula</option>
+                                        <option value="@DocumentoIdentidad.Pasaporte">Pasaporte</option>
+                                        <option value="@DocumentoIdentidad.Rnc">RNC</option>
+                                    </select>
+                                    <label for="tipo-documento">Tipo de documento</label>
+                                </div>
+                                <span asp-validation-for="TipoDocumento" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="form-floating">
+                                    <input asp-for="NumeroDocumento" class="form-control" placeholder="Número de documento" autocomplete="off" />
+                                    <label asp-for="NumeroDocumento"></label>
+                                </div>
+                                <span asp-validation-for="NumeroDocumento" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6" data-solo="@DocumentoIdentidad.CuentaPersona">
+                                <div class="form-floating">
+                                    <input asp-for="FechaNacimiento" class="form-control" placeholder="Fecha de nacimiento" autocomplete="bday" />
+                                    <label asp-for="FechaNacimiento"></label>
+                                </div>
+                                <span asp-validation-for="FechaNacimiento" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6" data-solo="@DocumentoIdentidad.CuentaPersona">
+                                <div class="form-floating">
+                                    <input asp-for="Nacionalidad" class="form-control" placeholder="Nacionalidad" />
+                                    <label asp-for="Nacionalidad"></label>
+                                </div>
+                                <span asp-validation-for="Nacionalidad" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Telefono" type="tel" class="form-control" placeholder="Teléfono" autocomplete="tel" />
+                                    <label asp-for="Telefono"></label>
+                                </div>
+                                <span asp-validation-for="Telefono" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Pais" class="form-control" placeholder="País" autocomplete="country-name" />
+                                    <label asp-for="Pais"></label>
+                                </div>
+                                <span asp-validation-for="Pais" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Ciudad" class="form-control" placeholder="Ciudad" autocomplete="address-level2" />
+                                    <label asp-for="Ciudad"></label>
+                                </div>
+                                <span asp-validation-for="Ciudad" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="Direccion" class="form-control" placeholder="Dirección" autocomplete="street-address" />
+                                    <label asp-for="Direccion"></label>
+                                </div>
+                                <span asp-validation-for="Direccion" class="text-danger small"></span>
                             </div>
                             <div class="col-12">
                                 <div class="form-floating">
@@ -55,7 +132,7 @@
                             </div>
                             <div class="col-12">
                                 <div class="form-text">
-                                    La contraseña debe tener al menos @AppDonnyCuevas20210074.Models.Cuenta.RegistroViewModel.LongitudMinimaContrasena caracteres.
+                                    @PoliticaContrasena.TextoAyuda
                                 </div>
                             </div>
                             <div class="col-12">
@@ -76,4 +153,29 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Muestra los campos de persona o de empresa y los documentos que corresponden a cada una
+        (() => {
+            const cuenta = document.getElementById("tipo-cuenta");
+            const documento = document.getElementById("tipo-documento");
+            const etiquetaNombre = document.getElementById("etiqueta-nombre");
+            const empresa = "@DocumentoIdentidad.CuentaEmpresa";
+            const rnc = "@DocumentoIdentidad.Rnc";
+
+            function actualizar() {
+                const esEmpresa = cuenta.value === empresa;
+                document.querySelectorAll("[data-solo]").forEach((c) => { c.hidden = c.dataset.solo !== cuenta.value; });
+                [...documento.options].forEach((o) => {
+                    const permitido = (o.value === rnc) === esEmpresa;
+                    o.hidden = !permitido;
+                    o.disabled = !permitido;
+                });
+                if (documento.selectedOptions[0]?.disabled) documento.value = esEmpresa ? rnc : "@DocumentoIdentidad.Cedula";
+                etiquetaNombre.textContent = esEmpresa ? "Nombre del representante" : "Nombre completo";
+            }
+
+            cuenta.addEventListener("change", actualizar);
+            actualizar();
+        })();
+    </script>
 }

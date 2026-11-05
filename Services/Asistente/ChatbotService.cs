@@ -85,7 +85,8 @@ public class ChatbotService
         _umbralConfianza = configuracion.GetValue("ServicioBert:UmbralConfianza", 0.5);
     }
 
-    public async Task<RespuestaChat> ProcesarAsync(string mensaje, Guid idSesion, CancellationToken ct = default)
+    // idUsuario: visitante con sesión iniciada (la consulta queda en su historial de Mi perfil)
+    public async Task<RespuestaChat> ProcesarAsync(string mensaje, Guid idSesion, int? idUsuario = null, CancellationToken ct = default)
     {
         var reloj = Stopwatch.StartNew();
         var contexto = _cache.GetOrCreate($"chat:{idSesion}", entrada =>
@@ -106,6 +107,10 @@ public class ChatbotService
             // 2 y 3. Se consulta SQL Server según la intención y se arma la respuesta
             var consulta = new ConsultaChat(mensaje, TextoChat.Normalizar(mensaje), clasificacion, contexto);
             await ResolverAsync(consulta, respuesta, ct);
+
+            // Se recuerda el último plan para que el visitante pueda guardarlo en su perfil
+            if (respuesta.Presupuesto != null)
+                contexto.UltimoPresupuesto = respuesta.Presupuesto;
         }
         catch (ServicioIaException ex)
         {
@@ -133,7 +138,7 @@ public class ChatbotService
         }
 
         reloj.Stop();
-        respuesta.IdConsulta = await RegistrarConsultaAsync(mensaje, respuesta, (int)reloj.ElapsedMilliseconds);
+        respuesta.IdConsulta = await RegistrarConsultaAsync(mensaje, respuesta, idUsuario, (int)reloj.ElapsedMilliseconds);
         return respuesta;
     }
 
@@ -922,7 +927,14 @@ public class ChatbotService
         texto.Append("\n¿Quieres los detalles de alguna? Por ejemplo, escribe «la 1».");
 
         c.Contexto.RecordarRutas(mostradas.Select(x => x.IdRuta));
-        r.Resultados.AddRange(mostradas.Select(x => new ResultadoChat(x.IdRuta, x.Nombre, "Ruta", ResumenRuta(x).Trim(' ', '—'))));
+        r.Resultados.AddRange(mostradas.Select((x, i) => new ResultadoChat(x.IdRuta, x.Nombre, "Ruta", ResumenRuta(x).Trim(' ', '—'))
+        {
+            Numero = i + 1,
+            Origen = x.Origen,
+            Destino = x.Destino
+        }));
+        r.TextoCorto = (destino is null ? "Estas son las rutas registradas:" : $"Estas son las rutas registradas relacionadas con {destino.Nombre}:")
+                       + "\n\n¿Quieres los detalles de alguna? Toca la que te interese.";
         Responder(r, TiposRespuesta.Datos, texto.ToString().TrimEnd(), limpiarResultados: false);
     }
 
@@ -1352,7 +1364,9 @@ public class ChatbotService
             Subtitulo = "Ruta",
             Icono = "fa-route",
             Origen = ruta.Origen,
-            Destino = ruta.Destino
+            Destino = ruta.Destino,
+            MapaRuta = SitioPublico.UrlMapaRuta(ruta.OrigenLatitud, ruta.OrigenLongitud,
+                ruta.DestinoLatitud, ruta.DestinoLongitud, ruta.TipoTransporte)
         };
         Dato(detalle, "fa-road", "Distancia", ruta.DistanciaKilometros.HasValue ? $"{TextoNumero(ruta.DistanciaKilometros.Value)} km" : null);
         Dato(detalle, "fa-clock", "Duración aproximada", TextoDuracion(ruta.DuracionMinutos));
@@ -1891,7 +1905,11 @@ public class ChatbotService
             x.LugarDestino != null ? x.LugarDestino.Latitud : null,
             x.LugarDestino != null ? x.LugarDestino.Longitud : null));
 
-    private async Task<long?> RegistrarConsultaAsync(string mensaje, RespuestaChat respuesta, int milisegundos)
+    // Último plan de viaje que el asistente mostró en la sesión (null si no hay o la sesión expiró)
+    public PresupuestoChat? UltimoPresupuesto(Guid idSesion) =>
+        _cache.TryGetValue($"chat:{idSesion}", out ContextoConversacion? contexto) ? contexto?.UltimoPresupuesto : null;
+
+    private async Task<long?> RegistrarConsultaAsync(string mensaje, RespuestaChat respuesta, int? idUsuario, int milisegundos)
     {
         try
         {
@@ -1903,6 +1921,7 @@ public class ChatbotService
                 RespuestaAsistente = respuesta.Respuesta,
                 TipoRespuesta = Truncar(respuesta.TipoRespuesta, 50),
                 TiempoRespuestaMilisegundos = milisegundos,
+                IdUsuario = idUsuario,
                 FechaConsulta = DateTime.Now
             };
 

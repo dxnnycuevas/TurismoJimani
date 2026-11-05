@@ -213,6 +213,7 @@
                         {
                             <a href="@urlComoLlegar" target="_blank" rel="noopener" class="jm-btn jm-btn--contorno"><i class="fa fa-directions"></i>Cómo llegar</a>
                         }
+                        <partial name="_BotonFavorito" model="(true, p.IdPrestador)" />
                         <a asp-controller="Asistente" asp-action="Index" asp-route-pregunta="Háblame de @p.Nombre"
                            class="jm-btn jm-btn--contorno"><i class="fa fa-comments"></i>Preguntar al asistente</a>
                     </div>

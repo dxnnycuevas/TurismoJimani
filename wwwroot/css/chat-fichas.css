@@ -596,6 +596,56 @@ a.chat-presupuesto__opcion:focus-visible { text-decoration: underline; }
 
 .chat-tarjeta__parada--destino .chat-tarjeta__punto { background: var(--d-color); }
 
+.chat-tarjeta__textos {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.chat-tarjeta__etiqueta {
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--d-color);
+}
+
+.chat-tarjeta__mapa {
+    display: block;
+    width: 100%;
+    height: 260px;
+    border: 0;
+    border-radius: 12px;
+}
+
+/* Lista de rutas: tarjetas que se pueden tocar */
+.chat-rutas {
+    display: grid;
+    gap: .6rem;
+    max-width: 560px;
+    margin: -.25rem 0 .75rem;
+}
+
+.chat-tarjeta.chat-ruta {
+    display: grid;
+    gap: .5rem;
+    margin: 0;
+    padding: .75rem .85rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.chat-tarjeta.chat-ruta:hover,
+.chat-tarjeta.chat-ruta:focus-visible { border-color: var(--d-color); }
+
+.chat-ruta__titulo { font-weight: 700; }
+
+.chat-ruta__datos {
+    font-size: .8rem;
+    color: var(--texto-suave, #6b5646);
+}
+
 .chat-tarjeta__linea {
     position: relative;
     display: grid;

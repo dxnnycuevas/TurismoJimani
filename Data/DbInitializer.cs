@@ -10,6 +10,8 @@ namespace AppDonnyCuevas20210074.Data
         {
             using var scope = services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TurismoJimaniContext>();
+            var configuracion = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbInitializer");
 
             foreach (var nombreRol in new[] { RolesSistema.Administrador, RolesSistema.Editor, RolesSistema.Visitante })
             {
@@ -20,22 +22,50 @@ namespace AppDonnyCuevas20210074.Data
             }
             db.SaveChanges();
 
-            if (!db.Usuarios.Any())
+            // Administrador inicial (S-03). La contraseña ya no está escrita en el código: se toma de la
+            // configuración (AdminInicial:Contrasena), que se guarda en user-secrets durante el desarrollo o
+            // en una variable de entorno en el servidor (AdminInicial__Contrasena). En el primer inicio de
+            // sesión la aplicación obliga a cambiarla (CuentaController.CompletarInicioSesionAsync).
+            // Se comprueba que exista algún administrador (no solo algún usuario), porque los visitantes
+            // pueden registrarse antes de que se configure la contraseña inicial.
+            if (!db.Usuarios.Any(u => u.Rol != null && u.Rol.Nombre == RolesSistema.Administrador))
             {
-                var rolAdmin = db.Roles.First(r => r.Nombre == "Administrador");
+                var correo = configuracion["AdminInicial:Correo"];
+                var contrasena = configuracion["AdminInicial:Contrasena"];
 
-                var admin = new Usuario
+                if (string.IsNullOrWhiteSpace(correo)) correo = "admin@turismojimani.com";
+
+                if (string.IsNullOrWhiteSpace(contrasena))
                 {
-                    IdRol = rolAdmin.IdRol,
-                    NombreCompleto = "Administrador",
-                    Correo = "admin@turismojimani.com",
-                    Activo = true,
-                    FechaCreacion = DateTime.Now
-                };
-                admin.ContrasenaHash = new PasswordHasher<Usuario>().HashPassword(admin, "Admin123*");
+                    logger.LogWarning(
+                        "No se creó el administrador inicial porque falta la clave AdminInicial:Contrasena. " +
+                        "Defínala con: dotnet user-secrets set \"AdminInicial:Contrasena\" \"<contraseña temporal>\" " +
+                        "(o con la variable de entorno AdminInicial__Contrasena) y reinicie la aplicación.");
+                }
+                else if (db.Usuarios.Any(u => u.Correo == correo.Trim()))
+                {
+                    logger.LogWarning("No se creó el administrador inicial: ya existe una cuenta con el correo {Correo}.", correo);
+                }
+                else
+                {
+                    var rolAdmin = db.Roles.First(r => r.Nombre == RolesSistema.Administrador);
 
-                db.Usuarios.Add(admin);
-                db.SaveChanges();
+                    var admin = new Usuario
+                    {
+                        IdRol = rolAdmin.IdRol,
+                        NombreCompleto = "Administrador",
+                        Correo = correo.Trim(),
+                        Activo = true,
+                        FechaCreacion = DateTime.Now
+                    };
+                    admin.ContrasenaHash = new PasswordHasher<Usuario>().HashPassword(admin, contrasena);
+
+                    db.Usuarios.Add(admin);
+                    db.SaveChanges();
+
+                    logger.LogInformation(
+                        "Se creó el administrador inicial ({Correo}). Deberá cambiar la contraseña en el primer acceso.", admin.Correo);
+                }
             }
 
             // Tipos de servicio iniciales (el administrador puede agregar, editar o desactivar)

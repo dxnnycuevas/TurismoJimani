@@ -32,6 +32,7 @@
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/sitio/css/jimani.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ver-contrasena.css" asp-append-version="true" />
 </head>
 <body class="jm" data-url-dato="@Url.Action("Dato", "Sitio")">
     <partial name="_SimbolosTainos" />
@@ -60,6 +61,11 @@
                 @if (estaConectado)
                 {
                     <span><i class="fa fa-user me-2"></i>Hola, @User.Identity!.Name</span>
+                    @if (!esPersonal)
+                    {
+                        <a asp-controller="Perfil" asp-action="Index"><i class="fa fa-heart me-2"></i>Mi perfil</a>
+                    }
+                    <a asp-controller="Cuenta" asp-action="CambiarContrasena"><i class="fa fa-key me-2"></i>Contraseña</a>
                     @if (esPersonal)
                     {
                         <a asp-controller="Home" asp-action="Index"><i class="fa fa-cog me-2"></i>Panel</a>
@@ -123,6 +129,10 @@
                         @* En pantallas pequeñas la barra superior se oculta: la cuenta se muestra en el menú *@
                         @if (estaConectado)
                         {
+                            @if (!esPersonal)
+                            {
+                                <li class="nav-item d-lg-none"><a asp-controller="Perfil" asp-action="Index" class="nav-link">Mi perfil</a></li>
+                            }
                             <li class="nav-item d-lg-none">
                                 <form asp-controller="Cuenta" asp-action="Salir" method="post" class="m-0">
                                     <button type="submit" class="nav-link btn btn-link w-100 text-start">Cerrar sesión (@User.Identity!.Name)</button>
@@ -183,7 +193,7 @@
             <div class="container pt-4">
                 <div class="jm-alerta d-flex align-items-center justify-content-between gap-3" role="status">
                     <span><i class="fa fa-check-circle text-danger me-2"></i>@exito</span>
-                    <button type="button" class="btn-close" aria-label="Cerrar" onclick="this.closest('.container').remove()"></button>
+                    <button type="button" class="btn-close" aria-label="Cerrar" data-cerrar-alerta></button>
                 </div>
             </div>
         }
@@ -274,6 +284,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/sitio/js/jimani.js" asp-append-version="true"></script>
+    <script src="~/js/ver-contrasena.js" asp-append-version="true"></script>
     <script src="~/sitio/js/idioma.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

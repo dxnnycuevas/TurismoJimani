@@ -1,0 +1,72 @@
+@model AppDonnyCuevas20210074.Models.Cuenta.CambiarContrasenaViewModel
+@{
+    // El personal ve el panel de administración; los visitantes, el sitio público
+    var esPersonal = RolesSistema.EsPersonal(User);
+    Layout = esPersonal ? "_Layout" : "_LayoutSitio";
+    ViewData["Title"] = "Cambiar contraseña";
+    ViewData["Subtitulo"] = "Actualiza la contraseña de tu cuenta.";
+    ViewData["Descripcion"] = "Cambio de contraseña de la cuenta de Turismo Jimaní.";
+    var obligatorio = CambioContrasena.EstaPendiente(User);
+}
+
+<section class="@(esPersonal ? "py-4" : "jm-seccion pt-4")">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6 col-xl-5">
+                <div class="@(esPersonal ? "card shadow-sm" : "jm-formulario jm-vidrio")">
+                    <div class="@(esPersonal ? "card-body p-4" : "")">
+
+                        <h2 class="h4 text-center mb-2">Cambiar contraseña</h2>
+
+                        @if (obligatorio)
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                <i class="fa fa-shield-alt me-2" aria-hidden="true"></i>
+                                @(TempData["Aviso"] as string ?? "Por seguridad, debe cambiar su contraseña antes de continuar.")
+                            </div>
+                        }
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <form asp-controller="Cuenta" asp-action="CambiarContrasena" asp-route-returnUrl="@ViewBag.ReturnUrl" method="post">
+                            <div class="mb-3">
+                                <label asp-for="ContrasenaActual" class="form-label"></label>
+                                <input asp-for="ContrasenaActual" class="form-control" autocomplete="current-password" />
+                                <span asp-validation-for="ContrasenaActual" class="text-danger small"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="NuevaContrasena" class="form-label"></label>
+                                <input asp-for="NuevaContrasena" class="form-control" autocomplete="new-password" />
+                                <div class="form-text">@PoliticaContrasena.TextoAyuda</div>
+                                <span asp-validation-for="NuevaContrasena" class="text-danger small"></span>
+                            </div>
+
+                            <div class="mb-4">
+                                <label asp-for="ConfirmarContrasena" class="form-label"></label>
+                                <input asp-for="ConfirmarContrasena" class="form-control" autocomplete="new-password" />
+                                <span asp-validation-for="ConfirmarContrasena" class="text-danger small"></span>
+                            </div>
+
+                            <button type="submit" class="@(esPersonal ? "btn btn-primary" : "jm-btn") w-100">
+                                <i class="fa fa-key me-2" aria-hidden="true"></i>Guardar nueva contraseña
+                            </button>
+                        </form>
+
+                        @if (obligatorio)
+                        {
+                            @* Mientras el cambio sea obligatorio solo se puede cambiar la contraseña o salir *@
+                            <form asp-controller="Cuenta" asp-action="@(esPersonal ? "Logout" : "Salir")" method="post" class="text-center mt-3">
+                                <button type="submit" class="btn btn-link btn-sm">Cerrar sesión</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

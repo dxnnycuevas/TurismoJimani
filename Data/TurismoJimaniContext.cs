@@ -30,6 +30,8 @@ namespace AppDonnyCuevas20210074.Data
         public DbSet<Evento> Eventos => Set<Evento>();
         public DbSet<DatoCurioso> DatosCuriosos => Set<DatoCurioso>();
         public DbSet<TarifaViaje> TarifasViaje => Set<TarifaViaje>();
+        public DbSet<Favorito> Favoritos => Set<Favorito>();
+        public DbSet<PlanGuardado> PlanesGuardados => Set<PlanGuardado>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +43,9 @@ namespace AppDonnyCuevas20210074.Data
             modelBuilder.Entity<Servicio>().HasIndex(s => s.Nombre).IsUnique();
             modelBuilder.Entity<Intencion>().HasIndex(i => i.Nombre).IsUnique();
             modelBuilder.Entity<Usuario>().HasIndex(u => u.Correo).IsUnique();
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => new { u.TipoDocumento, u.NumeroDocumento }).IsUnique()
+                .HasFilter("[NumeroDocumento] IS NOT NULL");
             modelBuilder.Entity<TipoPrestador>().HasIndex(t => t.Nombre).IsUnique();
 
             // ---- Relaciones 1:1 (el IdLugar es UNIQUE en cada una de estas tablas) ----
@@ -116,6 +121,34 @@ namespace AppDonnyCuevas20210074.Data
             // ---- CHECK constraint (DiaSemana BETWEEN 1 AND 7) ----
             modelBuilder.Entity<Horario>()
                 .ToTable(t => t.HasCheckConstraint("CK_Horarios_DiaSemana", "DiaSemana BETWEEN 1 AND 7"));
+
+            // ---- Perfil del visitante (IV-20) ----
+            // Si se borra el usuario, se borran sus favoritos y planes; sus consultas quedan anónimas
+            modelBuilder.Entity<Favorito>()
+                .HasOne(f => f.Usuario).WithMany().HasForeignKey(f => f.IdUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Favorito>()
+                .HasOne(f => f.Lugar).WithMany().HasForeignKey(f => f.IdLugar)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Favorito>()
+                .HasOne(f => f.Prestador).WithMany().HasForeignKey(f => f.IdPrestador)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Favorito>()
+                .ToTable(t => t.HasCheckConstraint("CK_Favoritos_Elemento",
+                    "(IdLugar IS NOT NULL AND IdPrestador IS NULL) OR (IdLugar IS NULL AND IdPrestador IS NOT NULL)"));
+            modelBuilder.Entity<Favorito>()
+                .HasIndex(f => new { f.IdUsuario, f.IdLugar }).IsUnique().HasFilter("IdLugar IS NOT NULL");
+            modelBuilder.Entity<Favorito>()
+                .HasIndex(f => new { f.IdUsuario, f.IdPrestador }).IsUnique().HasFilter("IdPrestador IS NOT NULL");
+
+            modelBuilder.Entity<PlanGuardado>()
+                .HasOne(p => p.Usuario).WithMany().HasForeignKey(p => p.IdUsuario)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ConsultaAsistente>()
+                .HasOne(c => c.Usuario).WithMany().HasForeignKey(c => c.IdUsuario)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<ConsultaAsistente>().HasIndex(c => new { c.IdUsuario, c.FechaConsulta });
         }
     }
 }

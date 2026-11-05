@@ -1,3 +1,4 @@
+using AppDonnyCuevas20210074.Helpers;
 using AppDonnyCuevas20210074.Models.Asistente;
 using AppDonnyCuevas20210074.Services.Asistente;
 using Microsoft.AspNetCore.Authorization;
@@ -47,7 +48,7 @@ public class AsistenteController : Controller
 
         try
         {
-            var respuesta = await _chatbot.ProcesarAsync(mensaje, idSesion, ct);
+            var respuesta = await _chatbot.ProcesarAsync(mensaje, idSesion, SesionVisitante.IdUsuario(User), ct);
             return Ok(respuesta);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

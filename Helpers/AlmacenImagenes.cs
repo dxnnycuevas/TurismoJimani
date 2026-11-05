@@ -2,6 +2,11 @@ namespace AppDonnyCuevas20210074.Helpers;
 
 // Guarda en wwwroot/uploads las fotos que se suben desde el panel y devuelve su ruta pública
 // ("/uploads/prestadores/abc.jpg"), que es la que se guarda en Imagenes.UrlImagen.
+// Seguridad de la carga (S-06):
+// - el tipo real se comprueba con la firma del archivo (magic bytes), no solo con la extensión o el
+//   Content-Type, que los controla el cliente;
+// - solo se aceptan JPG, PNG y WEBP (se retiró GIF);
+// - el archivo se guarda con un nombre aleatorio (GUID) y con la extensión que corresponde a su firma.
 public class AlmacenImagenes
 {
     public const long TamanoMaximoBytes = 8 * 1024 * 1024;           // 8 MB por foto
@@ -12,11 +17,11 @@ public class AlmacenImagenes
         [".jpg"] = new[] { "image/jpeg", "image/pjpeg" },
         [".jpeg"] = new[] { "image/jpeg", "image/pjpeg" },
         [".png"] = new[] { "image/png" },
-        [".webp"] = new[] { "image/webp" },
-        [".gif"] = new[] { "image/gif" }
+        [".webp"] = new[] { "image/webp" }
     };
 
-    public const string ExtensionesAceptadas = ".jpg,.jpeg,.png,.webp,.gif";
+    public const string ExtensionesAceptadas = ".jpg,.jpeg,.png,.webp";
+    public const string FormatosAceptadosTexto = "JPG, PNG o WEBP";
 
     private const string CarpetaPublica = "uploads";
 
@@ -38,15 +43,23 @@ public class AlmacenImagenes
 
         var extension = Path.GetExtension(archivo.FileName);
         if (!TiposPermitidos.TryGetValue(extension, out var tipos) || !tipos.Contains(archivo.ContentType, StringComparer.OrdinalIgnoreCase))
-            return $"«{archivo.FileName}» no es una imagen válida. Use JPG, PNG, WEBP o GIF.";
+            return $"«{archivo.FileName}» no es una imagen válida. Use {FormatosAceptadosTexto}.";
 
+        var extensionReal = DetectarFormato(archivo);
+        if (extensionReal == null)
+            return $"«{archivo.FileName}» no es una imagen {FormatosAceptadosTexto} real (su contenido no corresponde a una foto).";
+
+        // Una foto PNG con extensión .jpg (o al revés) se acepta, pero se guarda con su extensión real
         return null;
     }
 
     // carpeta: "lugares" o "prestadores"
     public async Task<string> GuardarAsync(IFormFile archivo, string carpeta)
     {
-        var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+        // Se vuelve a comprobar la firma por si se llama sin validar antes
+        var extension = DetectarFormato(archivo)
+            ?? throw new InvalidOperationException($"«{archivo.FileName}» no es una imagen {FormatosAceptadosTexto}.");
+
         var destino = Path.Combine(_entorno.WebRootPath, CarpetaPublica, carpeta);
         Directory.CreateDirectory(destino);
 
@@ -57,6 +70,34 @@ public class AlmacenImagenes
         }
 
         return $"/{CarpetaPublica}/{carpeta}/{nombre}";
+    }
+
+    // Lee los primeros bytes y devuelve ".jpg", ".png" o ".webp" según la firma del archivo; null si no coincide
+    //   JPEG: FF D8 FF
+    //   PNG:  89 50 4E 47 0D 0A 1A 0A
+    //   WEBP: "RIFF" (4 bytes) + tamaño (4 bytes) + "WEBP"
+    public static string? DetectarFormato(IFormFile archivo)
+    {
+        Span<byte> cabecera = stackalloc byte[12];
+        int leidos;
+
+        using (var flujo = archivo.OpenReadStream())
+        {
+            leidos = flujo.ReadAtLeast(cabecera, cabecera.Length, throwOnEndOfStream: false);
+        }
+
+        if (leidos >= 3 && cabecera[0] == 0xFF && cabecera[1] == 0xD8 && cabecera[2] == 0xFF)
+            return ".jpg";
+
+        if (leidos >= 8 && cabecera[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+            return ".png";
+
+        if (leidos >= 12 &&
+            cabecera[..4].SequenceEqual("RIFF"u8) &&
+            cabecera[8..12].SequenceEqual("WEBP"u8))
+            return ".webp";
+
+        return null;
     }
 
     // Valida y guarda varias fotos a la vez; devuelve los registros Imagen listos para agregar

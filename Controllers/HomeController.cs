@@ -147,6 +147,7 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
+    [PermitirConCambioPendiente]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

@@ -119,6 +119,9 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Property<Guid>("IdSesion")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("IdUsuario")
+                        .HasColumnType("int");
+
                     b.Property<string>("IntencionDetectada")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -141,6 +144,8 @@ namespace AppDonnyCuevas20210074.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("IdConsulta");
+
+                    b.HasIndex("IdUsuario", "FechaConsulta");
 
                     b.ToTable("ConsultasAsistente");
                 });
@@ -351,6 +356,46 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.ToTable("Eventos");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Favorito", b =>
+                {
+                    b.Property<int>("IdFavorito")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdFavorito"));
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("IdLugar")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IdPrestador")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
+
+                    b.HasKey("IdFavorito");
+
+                    b.HasIndex("IdLugar");
+
+                    b.HasIndex("IdPrestador");
+
+                    b.HasIndex("IdUsuario", "IdLugar")
+                        .IsUnique()
+                        .HasFilter("IdLugar IS NOT NULL");
+
+                    b.HasIndex("IdUsuario", "IdPrestador")
+                        .IsUnique()
+                        .HasFilter("IdPrestador IS NOT NULL");
+
+                    b.ToTable("Favoritos", t =>
+                        {
+                            t.HasCheckConstraint("CK_Favoritos_Elemento", "(IdLugar IS NOT NULL AND IdPrestador IS NULL) OR (IdLugar IS NULL AND IdPrestador IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Horario", b =>
                 {
                     b.Property<int>("IdHorario")
@@ -534,6 +579,48 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.HasKey("IdLugar");
 
                     b.ToTable("Lugares");
+                });
+
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.PlanGuardado", b =>
+                {
+                    b.Property<int>("IdPlan")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPlan"));
+
+                    b.Property<bool>("Cabe")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Detalle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("Noches")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.HasKey("IdPlan");
+
+                    b.HasIndex("IdUsuario");
+
+                    b.ToTable("PlanesGuardados");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Prestador", b =>
@@ -848,6 +935,10 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Ciudad")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("ContrasenaHash")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -858,19 +949,54 @@ namespace AppDonnyCuevas20210074.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("FechaActualizacion")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("date");
+
                     b.Property<int>("IdRol")
                         .HasColumnType("int");
+
+                    b.Property<string>("Nacionalidad")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("NombreCompleto")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("NombreEmpresa")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("NumeroDocumento")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Pais")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("TipoCuenta")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TipoDocumento")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("IdUsuario");
 
@@ -878,6 +1004,10 @@ namespace AppDonnyCuevas20210074.Migrations
                         .IsUnique();
 
                     b.HasIndex("IdRol");
+
+                    b.HasIndex("TipoDocumento", "NumeroDocumento")
+                        .IsUnique()
+                        .HasFilter("[NumeroDocumento] IS NOT NULL");
 
                     b.ToTable("Usuarios");
                 });
@@ -938,6 +1068,16 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Navigation("Lugar");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.ConsultaAsistente", b =>
+                {
+                    b.HasOne("AppDonnyCuevas20210074.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Contacto", b =>
                 {
                     b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
@@ -970,6 +1110,31 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Navigation("Lugar");
                 });
 
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.Favorito", b =>
+                {
+                    b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
+                        .WithMany()
+                        .HasForeignKey("IdLugar")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AppDonnyCuevas20210074.Models.Prestador", "Prestador")
+                        .WithMany()
+                        .HasForeignKey("IdPrestador")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AppDonnyCuevas20210074.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lugar");
+
+                    b.Navigation("Prestador");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Horario", b =>
                 {
                     b.HasOne("AppDonnyCuevas20210074.Models.Lugar", "Lugar")
@@ -996,6 +1161,17 @@ namespace AppDonnyCuevas20210074.Migrations
                     b.Navigation("Lugar");
 
                     b.Navigation("Prestador");
+                });
+
+            modelBuilder.Entity("AppDonnyCuevas20210074.Models.PlanGuardado", b =>
+                {
+                    b.HasOne("AppDonnyCuevas20210074.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("AppDonnyCuevas20210074.Models.Prestador", b =>

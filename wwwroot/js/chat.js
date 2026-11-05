@@ -221,6 +221,56 @@
         return fila;
     }
 
+    // Botón para guardar el plan en Mi perfil (visitante con sesión) o invitación a iniciar sesión.
+    // El servidor guarda el último plan que calculó en esta conversación (idSesion).
+    function crearGuardarPlan() {
+        const urlGuardar = formulario.dataset.urlGuardarPlan;
+        const urlIngresar = formulario.dataset.urlIngresar;
+        const pie = crear("div", "chat-presupuesto__guardar");
+
+        if (urlGuardar) {
+            const boton = crear("button", "jm-btn jm-btn--sm jm-btn--contorno");
+            boton.type = "button";
+            boton.append(icono("fa fa-heart"), document.createTextNode(" Guardar en mi perfil"));
+            const aviso = crear("span", "chat-presupuesto__aviso small");
+            aviso.setAttribute("role", "status");
+            boton.addEventListener("click", async () => {
+                boton.disabled = true;
+                try {
+                    const respuesta = await fetch(urlGuardar, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "RequestVerificationToken": token },
+                        body: JSON.stringify({ idSesion })
+                    });
+                    let datos = null;
+                    try { datos = await respuesta.json(); } catch { /* sin JSON */ }
+                    if (respuesta.ok) {
+                        aviso.replaceChildren(document.createTextNode((datos?.mensaje ?? "Plan guardado.") + " "));
+                        if (datos?.url) aviso.append(crear("a", null, "Ver mis planes"));
+                        aviso.lastChild instanceof HTMLAnchorElement && (aviso.lastChild.href = datos.url);
+                        boton.remove();
+                    } else {
+                        aviso.textContent = datos?.error ?? "No se pudo guardar el plan.";
+                        boton.disabled = false;
+                    }
+                } catch {
+                    aviso.textContent = "No se pudo guardar el plan. Revisa tu conexión.";
+                    boton.disabled = false;
+                }
+            });
+            pie.append(boton, aviso);
+            return pie;
+        }
+
+        if (urlIngresar) {
+            const enlace = crear("a", "chat-presupuesto__aviso small", "Inicia sesión para guardar tus planes de viaje");
+            enlace.href = urlIngresar;
+            pie.append(icono("fa fa-heart"), document.createTextNode(" "), enlace);
+            return pie;
+        }
+        return null;
+    }
+
     function agregarPresupuesto(p) {
         if (!p || !Array.isArray(p.lineas) || p.lineas.length === 0) return;
 
@@ -257,6 +307,8 @@
                 : `Te sobran ${dinero(diferencia)} para excursiones, guías y recuerdos.`));
 
         tarjeta.append(cabecera, crearBarra(p), uso, lineas, total, resultado);
+        const guardar = crearGuardarPlan();
+        if (guardar) tarjeta.append(guardar);
         mensajes.append(tarjeta);
         mensajes.scrollTop = mensajes.scrollHeight;
     }
@@ -275,8 +327,43 @@
 
     function crearParada(nombre, clase) {
         const parada = crear("div", "chat-tarjeta__parada chat-tarjeta__parada--" + clase);
-        parada.append(crear("span", "chat-tarjeta__punto"), crear("span", "chat-tarjeta__lugar", nombre));
+        const textos = crear("span", "chat-tarjeta__textos");
+        textos.append(crear("span", "chat-tarjeta__etiqueta", clase === "origen" ? "Sale de" : "Llega a"), crear("span", "chat-tarjeta__lugar", nombre));
+        parada.append(crear("span", "chat-tarjeta__punto"), textos);
         return parada;
+    }
+
+    function crearRecorrido(origen, destino) {
+        const recorrido = crear("div", "chat-tarjeta__recorrido");
+        const linea = crear("div", "chat-tarjeta__linea");
+        linea.append(icono("fa fa-route"));
+        recorrido.append(crearParada(origen ?? "—", "origen"), linea, crearParada(destino ?? "—", "destino"));
+        return recorrido;
+    }
+
+    // Lista de rutas: cada tarjeta marca de dónde sale y a dónde llega; al tocarla se piden sus detalles
+    function agregarRutas(resultados) {
+        const rutas = (resultados ?? []).filter((r) => r.tipo === "Ruta" && r.numero && (r.origen || r.destino));
+        if (rutas.length === 0) return false;
+
+        const lista = crear("div", "chat-rutas");
+        rutas.forEach((r) => {
+            const tarjeta = crear("button", "chat-tarjeta chat-tarjeta--ruta chat-ruta");
+            tarjeta.type = "button";
+            const titulo = crear("span", "chat-ruta__titulo", r.numero + ". " + r.nombre);
+            const datos = r.detalle?.split(", ").slice(1).join(" · ");
+            tarjeta.append(titulo, crearRecorrido(r.origen, r.destino));
+            if (datos) tarjeta.append(crear("span", "chat-ruta__datos", datos));
+            tarjeta.addEventListener("click", () => {
+                if (entrada.disabled) return;
+                entrada.value = "la " + r.numero;
+                formulario.requestSubmit();
+            });
+            lista.append(tarjeta);
+        });
+        mensajes.append(lista);
+        mensajes.scrollTop = mensajes.scrollHeight;
+        return true;
     }
 
     function agregarDetalle(d) {
@@ -313,11 +400,17 @@
 
         // Recorrido de una ruta: origen ●——● destino
         if (d.origen || d.destino) {
-            const recorrido = crear("div", "chat-tarjeta__recorrido");
-            const linea = crear("div", "chat-tarjeta__linea");
-            linea.append(icono("fa fa-route"));
-            recorrido.append(crearParada(d.origen ?? "—", "origen"), linea, crearParada(d.destino ?? "—", "destino"));
-            cuerpo.append(recorrido);
+            cuerpo.append(crearRecorrido(d.origen, d.destino));
+        }
+
+        // Mapa de Google con la línea azul del recorrido
+        if (typeof d.mapaRuta === "string" && d.mapaRuta.startsWith("https://maps.google.com/")) {
+            const mapa = crear("iframe", "chat-tarjeta__mapa");
+            mapa.src = d.mapaRuta;
+            mapa.title = "Recorrido de " + d.titulo;
+            mapa.loading = "lazy";
+            mapa.referrerPolicy = "no-referrer-when-downgrade";
+            cuerpo.append(mapa);
         }
 
         if (d.resumen) cuerpo.append(crear("p", "chat-tarjeta__resumen", d.resumen));
@@ -440,13 +533,13 @@
                     ? `Intención detectada: ${datos.intencion} (${Math.round(datos.confianza * 100)}%)`
                     : null;
                 const esError = ["ErrorIA", "ErrorBD", "Error"].includes(datos.tipoRespuesta);
-                const hayTarjetas = (datos.resultados ?? []).some(r => enlaceSeguro(r.url)) || !!datos.presupuesto || !!datos.detalle;
+                const hayTarjetas = (datos.resultados ?? []).some(r => enlaceSeguro(r.url) || r.tipo === "Ruta") || !!datos.presupuesto || !!datos.detalle;
                 // Con tarjetas se muestra el texto breve; el resto de la información va en ellas
                 agregarMensaje("Asistente", hayTarjetas && datos.textoCorto ? datos.textoCorto : datos.respuesta, detalle, esError);
                 agregarPresupuesto(datos.presupuesto);
                 agregarDetalle(datos.detalle);
                 // La tarjeta de detalle ya trae foto y botones de contacto: no se repite la ficha
-                if (!datos.detalle) agregarFichas(datos.resultados);
+                if (!datos.detalle && !agregarRutas(datos.resultados)) agregarFichas(datos.resultados);
                 agregarSugerencias(datos.sugerencias);
                 if (datos.tipoRespuesta === "ErrorIA") comprobarServicio();
             }

@@ -1434,3 +1434,25 @@ body.jm { top: 0 !important; }
 @media (max-width: 359.98px) {
     .jm-nav .jm-idioma__codigo { display: none; }
 }
+
+/* ---------------------------------------------------------------------
+   Mi perfil del visitante (favoritos, planes, conversaciones)
+   --------------------------------------------------------------------- */
+.perfil-pestanas .jm-chip.active { background: var(--azul-900); border-color: var(--azul-900); color: #fff; }
+.perfil-cuenta {
+    display: inline-block; min-width: 1.6em; padding: 0 .45em; border-radius: 50rem;
+    background: rgba(0, 45, 98, .1); font-size: .8rem; text-align: center;
+}
+.perfil-pestanas .jm-chip.active .perfil-cuenta { background: rgba(255, 255, 255, .25); }
+.perfil-plan__linea {
+    display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0;
+    border-bottom: 1px solid rgba(0, 45, 98, .1);
+}
+.perfil-plan__total { display: flex; justify-content: space-between; font-size: 1.1rem; margin-bottom: .5rem; }
+.perfil-conversacion summary { cursor: pointer; list-style-position: outside; }
+.perfil-conversacion .chat-mensaje { padding: .6rem .9rem; border-radius: var(--jm-radio-sm); margin-bottom: .5rem; max-width: 85%; }
+.perfil-conversacion .chat-usuario { margin-left: auto; background: var(--azul-50); }
+.perfil-conversacion .chat-asistente { background: rgba(255, 255, 255, .8); }
+.perfil-conversacion .chat-autor { font-size: .75rem; font-weight: 700; color: var(--texto-suave); }
+.perfil-conversacion .chat-texto { white-space: pre-line; overflow-wrap: anywhere; }
+

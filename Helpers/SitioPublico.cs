@@ -181,6 +181,19 @@ public static class SitioPublico
     public static string UrlMapa(string consulta, int zoom = 12) =>
         $"https://maps.google.com/maps?q={Uri.EscapeDataString(consulta)}&z={zoom}&output=embed";
 
+    // Mapa incrustado con el recorrido por carretera (la línea azul de Google Maps) entre dos puntos.
+    // Google no traza rutas por agua: las que van en bote no tienen mapa.
+    public static string? UrlMapaRuta(decimal? latitudOrigen, decimal? longitudOrigen,
+        decimal? latitudDestino, decimal? longitudDestino, string? transporte)
+    {
+        if (latitudOrigen is null || longitudOrigen is null || latitudDestino is null || longitudDestino is null) return null;
+        if (transporte?.Contains("bote", StringComparison.OrdinalIgnoreCase) == true) return null;
+
+        var origen = string.Create(CultureInfo.InvariantCulture, $"{latitudOrigen},{longitudOrigen}");
+        var destino = string.Create(CultureInfo.InvariantCulture, $"{latitudDestino},{longitudDestino}");
+        return $"https://maps.google.com/maps?saddr={origen}&daddr={destino}&output=embed";
+    }
+
     public static string? UrlComoLlegar(decimal? latitud, decimal? longitud)
     {
         if (latitud is null || longitud is null) return null;

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AppDonnyCuevas20210074.Data;
 using AppDonnyCuevas20210074.Models;
+using AppDonnyCuevas20210074.Services.Seguridad;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,14 +13,14 @@ namespace AppDonnyCuevas20210074.Controllers;
 [Authorize(Roles = "Administrador")]
 public class UsuariosController : Controller
 {
-    private const int LongitudMinimaContrasena = 6;
-
     private readonly TurismoJimaniContext _context;
+    private readonly ValidadorContrasenas _validador;
     private readonly PasswordHasher<Usuario> _hasher = new();
 
-    public UsuariosController(TurismoJimaniContext context)
+    public UsuariosController(TurismoJimaniContext context, ValidadorContrasenas validador)
     {
         _context = context;
+        _validador = validador;
     }
 
     // GET: Usuarios
@@ -72,7 +73,7 @@ public class UsuariosController : Controller
 
         entidad.Correo = entidad.Correo?.Trim() ?? string.Empty;
         await ValidarCorreoAsync(entidad);
-        ValidarContrasena(contrasena, confirmarContrasena, obligatoria: true);
+        await ValidarContrasenaAsync(contrasena, confirmarContrasena, entidad.Correo, obligatoria: true);
 
         if (ModelState.IsValid)
         {
@@ -116,7 +117,7 @@ public class UsuariosController : Controller
 
         entidad.Correo = entidad.Correo?.Trim() ?? string.Empty;
         await ValidarCorreoAsync(entidad);
-        ValidarContrasena(contrasena, confirmarContrasena, obligatoria: false);
+        await ValidarContrasenaAsync(contrasena, confirmarContrasena, entidad.Correo, obligatoria: false);
 
         // El usuario conectado no puede desactivarse ni quitarse el rol de administrador
         if (EsUsuarioActual(id))
@@ -203,7 +204,8 @@ public class UsuariosController : Controller
         }
     }
 
-    private void ValidarContrasena(string? contrasena, string? confirmacion, bool obligatoria)
+    // Política de contraseñas (S-01): 15 caracteres como mínimo, sin contraseñas comunes ni filtradas
+    private async Task ValidarContrasenaAsync(string? contrasena, string? confirmacion, string? correo, bool obligatoria)
     {
         if (string.IsNullOrEmpty(contrasena))
         {
@@ -212,8 +214,8 @@ public class UsuariosController : Controller
             return;
         }
 
-        if (contrasena.Length < LongitudMinimaContrasena)
-            ModelState.AddModelError("Contrasena", $"La contraseña debe tener al menos {LongitudMinimaContrasena} caracteres.");
+        foreach (var error in await _validador.ValidarAsync(contrasena, correo, HttpContext.RequestAborted))
+            ModelState.AddModelError("Contrasena", error);
 
         if (contrasena != confirmacion)
             ModelState.AddModelError("ConfirmarContrasena", "Las contraseñas no coinciden.");
